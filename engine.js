@@ -2235,163 +2235,30 @@ class ArkaEngine {
     return { subject, predicate, copula: isNegative ? 'de' : 'et', type: 'noun-pred' };
   }
 
-  _translateJpLineToArka(text, isPoetic = false) {
-    const breakdown = [];
-    let processedText = text;
+  // --- Shared helpers for JP→Arka pipeline ---
 
-    // ===== NUANCE PRE-PROCESSING =====
-    // 日本語の一人称・文語・敬語・文末助詞・命令形を正規化
-    let nuanceInfo = null;
-    if (typeof window !== 'undefined' && window.NuancePatch) {
-      nuanceInfo = window.NuancePatch.preprocessJapaneseNuance(processedText);
-      processedText = nuanceInfo.text;
-      // Replace nuance pronoun tokens back to standard __PRONOUN_ tokens
-      // so the existing pipeline handles them
-      processedText = processedText.replace(/__NUANCE_PRONOUN_(\w+)__/g, '__PRONOUN_$1__');
-    }
-
-    // ===== COPULA DETECTION (must run before particle stripping) =====
-    // Detect「XはY」predicate pattern requiring copula 'et' or negative 'de'
-    const copulaInfo = this._detectCopulaPattern(processedText);
-
-    // Subject inference
-    const subjectInfo = ArkaEngine.inferSubject(processedText);
-    let inferredSubject = null;
-    if (!subjectInfo.hasSubject && subjectInfo.subject) {
-      inferredSubject = subjectInfo.subject;
-    }
-
-    // If copula pattern detected, translate subject and predicate separately
-    if (copulaInfo) {
-      // Translate subject part
-      const subjectText = copulaInfo.subject;
-      const predicateText = copulaInfo.predicate;
-      const copula = copulaInfo.copula;
-
-      // Process subject through the greeting/pronoun/tokenize pipeline
-      let subProcessed = subjectText;
-      const greetingEntries = Object.entries(ArkaEngine.REVERSE_GREETINGS)
-        .sort((a, b) => b[0].length - a[0].length);
-      for (const [jp, arka] of greetingEntries) {
-        if (subProcessed.includes(jp)) {
-          subProcessed = subProcessed.replace(jp, ` __GREETING_${arka}__ `);
-        }
-      }
-      for (const [jp, arka] of Object.entries(ArkaEngine.REVERSE_PRONOUNS)) {
-        if (subProcessed.includes(jp)) {
-          subProcessed = subProcessed.replace(new RegExp(this._escapeRegex(jp), 'g'), ` __PRONOUN_${arka}__ `);
-        }
-      }
-      const subSegments = this._tokenizeJapanese(subProcessed);
-      const arkaParts = [];
-
-      // Translate subject tokens
-      for (const seg of subSegments) {
-        if (seg.startsWith('__GREETING_')) {
-          const word = seg.replace('__GREETING_', '').replace('__', '');
-          arkaParts.push(word);
-          breakdown.push({ original: word, root: word, type: 'greeting', meaning: ArkaEngine.GREETINGS[word] || word, entry: null, suffixes: [], prefixes: [] });
-          continue;
-        }
-        if (seg.startsWith('__PRONOUN_')) {
-          const word = seg.replace('__PRONOUN_', '').replace('__', '');
-          arkaParts.push(word);
-          breakdown.push({ original: word, root: word, type: 'pronoun', meaning: ArkaEngine.PRONOUNS[word] || word, entry: null, suffixes: [], prefixes: [] });
-          continue;
-        }
-        const result = this._lookupJapanese(seg);
-        if (result) {
-          arkaParts.push(result.arkaWord);
-          breakdown.push({ original: seg, root: result.arkaWord, type: 'word', meaning: seg, entry: result.entry, suffixes: [], prefixes: [] });
-        } else if (seg.trim()) {
-          arkaParts.push(`[${seg}]`);
-          breakdown.push({ original: seg, root: seg, type: 'unknown', meaning: '(該当なし)', entry: null, suffixes: [], prefixes: [] });
-        }
-      }
-
-      // Insert copula
-      arkaParts.push(copula);
-      const copulaMeaning = copula === 'et' ? '～である（繋辞）' : '～でない（否定繋辞）';
-      breakdown.push({ original: 'は', root: copula, type: 'copula', meaning: copulaMeaning, entry: null, suffixes: [], prefixes: [] });
-
-      // Translate predicate tokens
-      let predProcessed = predicateText;
-      for (const [jp, arka] of greetingEntries) {
-        if (predProcessed.includes(jp)) {
-          predProcessed = predProcessed.replace(jp, ` __GREETING_${arka}__ `);
-        }
-      }
-      for (const [jp, arka] of Object.entries(ArkaEngine.REVERSE_PRONOUNS)) {
-        if (predProcessed.includes(jp)) {
-          predProcessed = predProcessed.replace(new RegExp(this._escapeRegex(jp), 'g'), ` __PRONOUN_${arka}__ `);
-        }
-      }
-      const predSegments = this._tokenizeJapanese(predProcessed);
-
-      for (const seg of predSegments) {
-        if (seg.startsWith('__GREETING_')) {
-          const word = seg.replace('__GREETING_', '').replace('__', '');
-          arkaParts.push(word);
-          breakdown.push({ original: word, root: word, type: 'greeting', meaning: ArkaEngine.GREETINGS[word] || word, entry: null, suffixes: [], prefixes: [] });
-          continue;
-        }
-        if (seg.startsWith('__PRONOUN_')) {
-          const word = seg.replace('__PRONOUN_', '').replace('__', '');
-          arkaParts.push(word);
-          breakdown.push({ original: word, root: word, type: 'pronoun', meaning: ArkaEngine.PRONOUNS[word] || word, entry: null, suffixes: [], prefixes: [] });
-          continue;
-        }
-        const result = this._lookupJapanese(seg);
-        if (result) {
-          arkaParts.push(result.arkaWord);
-          breakdown.push({ original: seg, root: result.arkaWord, type: 'word', meaning: seg, entry: result.entry, suffixes: [], prefixes: [] });
-        } else if (seg.trim()) {
-          arkaParts.push(`[${seg}]`);
-          breakdown.push({ original: seg, root: seg, type: 'unknown', meaning: '(該当なし)', entry: null, suffixes: [], prefixes: [] });
-        }
-      }
-
-      let copulaTranslation = arkaParts.join(' ').trim();
-      // ===== NUANCE POST-PROCESSING (copula path) =====
-      if (nuanceInfo && typeof window !== 'undefined' && window.NuancePatch) {
-        copulaTranslation = window.NuancePatch.postprocessArkaNuance(copulaTranslation, nuanceInfo);
-      }
-      return { translation: copulaTranslation, breakdown };
-    }
-
-    // ===== STANDARD PATH (no copula pattern) =====
-
-    // Check for full greeting phrases first (sort by length descending to match longer phrases first)
+  /** Replace greeting/pronoun phrases with placeholder tokens */
+  _replaceGreetingsAndPronouns(text) {
+    let processed = text;
     const greetingEntries = Object.entries(ArkaEngine.REVERSE_GREETINGS)
       .sort((a, b) => b[0].length - a[0].length);
     for (const [jp, arka] of greetingEntries) {
-      if (processedText.includes(jp)) {
-        processedText = processedText.replace(jp, ` __GREETING_${arka}__ `);
+      if (processed.includes(jp)) {
+        processed = processed.replace(jp, ` __GREETING_${arka}__ `);
       }
     }
-
-    // Check for pronoun phrases
     for (const [jp, arka] of Object.entries(ArkaEngine.REVERSE_PRONOUNS)) {
-      if (processedText.includes(jp)) {
-        processedText = processedText.replace(new RegExp(this._escapeRegex(jp), 'g'), ` __PRONOUN_${arka}__ `);
+      if (processed.includes(jp)) {
+        processed = processed.replace(new RegExp(this._escapeRegex(jp), 'g'), ` __PRONOUN_${arka}__ `);
       }
     }
+    return processed;
+  }
 
-    const segments = this._tokenizeJapanese(processedText);
+  /** Resolve tokenized JP segments into Arka words + breakdown entries */
+  _resolveSegmentsToArka(segments) {
     const arkaParts = [];
-
-    // Add inferred subject at the beginning (SVO order)
-    if (inferredSubject && !isPoetic) {
-      arkaParts.push(inferredSubject);
-      breakdown.push({
-        original: `(${inferredSubject})`,
-        root: inferredSubject,
-        type: 'pronoun',
-        meaning: ArkaEngine.PRONOUNS[inferredSubject] + ' [推定]',
-        entry: null, suffixes: [], prefixes: []
-      });
-    }
-
+    const breakdown = [];
     for (const seg of segments) {
       if (seg.startsWith('__GREETING_')) {
         const word = seg.replace('__GREETING_', '').replace('__', '');
@@ -2405,7 +2272,6 @@ class ArkaEngine {
         breakdown.push({ original: word, root: word, type: 'pronoun', meaning: ArkaEngine.PRONOUNS[word] || word, entry: null, suffixes: [], prefixes: [] });
         continue;
       }
-
       const result = this._lookupJapanese(seg);
       if (result) {
         arkaParts.push(result.arkaWord);
@@ -2415,13 +2281,83 @@ class ArkaEngine {
         breakdown.push({ original: seg, root: seg, type: 'unknown', meaning: '(該当なし)', entry: null, suffixes: [], prefixes: [] });
       }
     }
+    return { arkaParts, breakdown };
+  }
 
-    let finalTranslation = arkaParts.join(' ').trim();
-    // ===== NUANCE POST-PROCESSING =====
+  /** Tokenize Japanese text with greeting/pronoun replacement */
+  _jpTextToArkaTokens(text) {
+    const replaced = this._replaceGreetingsAndPronouns(text);
+    const segments = this._tokenizeJapanese(replaced);
+    return this._resolveSegmentsToArka(segments);
+  }
+
+  /** Apply nuance post-processing if available */
+  _applyNuancePostprocess(translation, nuanceInfo) {
     if (nuanceInfo && typeof window !== 'undefined' && window.NuancePatch) {
-      finalTranslation = window.NuancePatch.postprocessArkaNuance(finalTranslation, nuanceInfo);
+      return window.NuancePatch.postprocessArkaNuance(translation, nuanceInfo);
     }
-    return { translation: finalTranslation, breakdown };
+    return translation;
+  }
+
+  _translateJpLineToArka(text, isPoetic = false) {
+    let processedText = text;
+
+    // ===== NUANCE PRE-PROCESSING =====
+    let nuanceInfo = null;
+    if (typeof window !== 'undefined' && window.NuancePatch) {
+      nuanceInfo = window.NuancePatch.preprocessJapaneseNuance(processedText);
+      processedText = nuanceInfo.text;
+      processedText = processedText.replace(/__NUANCE_PRONOUN_(\w+)__/g, '__PRONOUN_$1__');
+    }
+
+    // ===== COPULA DETECTION =====
+    const copulaInfo = this._detectCopulaPattern(processedText);
+
+    // Subject inference
+    const subjectInfo = ArkaEngine.inferSubject(processedText);
+    let inferredSubject = null;
+    if (!subjectInfo.hasSubject && subjectInfo.subject) {
+      inferredSubject = subjectInfo.subject;
+    }
+
+    // ===== COPULA PATH =====
+    if (copulaInfo) {
+      const { subject: subjectText, predicate: predicateText, copula } = copulaInfo;
+
+      // Translate subject + predicate through shared pipeline
+      const subResult = this._jpTextToArkaTokens(subjectText);
+      const predResult = this._jpTextToArkaTokens(predicateText);
+
+      // Assemble: subject + copula + predicate
+      const copulaMeaning = copula === 'et' ? '～である（繋辞）' : '～でない（否定繋辞）';
+      const copulaBreakdown = { original: 'は', root: copula, type: 'copula', meaning: copulaMeaning, entry: null, suffixes: [], prefixes: [] };
+
+      const arkaParts = [...subResult.arkaParts, copula, ...predResult.arkaParts];
+      const breakdown = [...subResult.breakdown, copulaBreakdown, ...predResult.breakdown];
+
+      let translation = arkaParts.join(' ').trim();
+      translation = this._applyNuancePostprocess(translation, nuanceInfo);
+      return { translation, breakdown };
+    }
+
+    // ===== STANDARD PATH =====
+    const { arkaParts, breakdown } = this._jpTextToArkaTokens(processedText);
+
+    // Add inferred subject at the beginning (SVO order)
+    if (inferredSubject && !isPoetic) {
+      arkaParts.unshift(inferredSubject);
+      breakdown.unshift({
+        original: `(${inferredSubject})`,
+        root: inferredSubject,
+        type: 'pronoun',
+        meaning: ArkaEngine.PRONOUNS[inferredSubject] + ' [推定]',
+        entry: null, suffixes: [], prefixes: []
+      });
+    }
+
+    let translation = arkaParts.join(' ').trim();
+    translation = this._applyNuancePostprocess(translation, nuanceInfo);
+    return { translation, breakdown };
   }
 
   _lookupJapanese(word) {

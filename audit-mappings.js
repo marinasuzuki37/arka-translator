@@ -44,7 +44,7 @@ for (const [jp, arka] of Object.entries(overrides)) {
   }
 }
 
-console.log(`\n--- 辞書に存在しないアルカ語 (${issues1.filter(i => i.type === 'NOT_IN_DICT').length}件) ---`);
+console.log(`\n--- 辞書に存在しないアルカ (${issues1.filter(i => i.type === 'NOT_IN_DICT').length}件) ---`);
 for (const i of issues1.filter(i => i.type === 'NOT_IN_DICT')) {
   console.log(`  ✗ ${i.jp} → ${i.arka} : ${i.detail}`);
 }
@@ -55,7 +55,7 @@ for (const i of issues1.filter(i => i.type === 'MISMATCH')) {
 }
 
 console.log('\n' + '='.repeat(80));
-console.log('AUDIT 2: 重複マッピング（同じ日本語が異なるアルカ語に割り当て）');
+console.log('AUDIT 2: 重複マッピング（同じ日本語が異なるアルカに割り当て）');
 console.log('='.repeat(80));
 
 const jpToArka = {};
@@ -70,7 +70,7 @@ for (const [jp, arkaList] of Object.entries(jpToArka)) {
 }
 
 console.log('\n' + '='.repeat(80));
-console.log('AUDIT 3: 同一アルカ語が異なる日本語に割り当て（衝突）');
+console.log('AUDIT 3: 同一アルカが異なる日本語に割り当て（衝突）');
 console.log('='.repeat(80));
 
 const arkaToJp = {};
@@ -180,7 +180,7 @@ const suspectDups = Object.entries(arkaToJp)
   })
   .map(([arka, jpList]) => ({ arka, jpList, meaning: (dictMap[arka] || '').slice(0, 80) }));
 
-console.log('\n--- 同一アルカ語に異なる意味の日本語がマッピング ---');
+console.log('\n--- 同一アルカに異なる意味の日本語がマッピング ---');
 for (const s of suspectDups) {
   console.log(`  ⚠ ${s.arka} ← [${s.jpList.join(', ')}] : ${s.meaning}`);
 }

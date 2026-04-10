@@ -66,7 +66,7 @@ class ArkaAIFallback {
     /^(?:translation|result|output|answer)\s*[:：]\s*/i,
     /^(?:in\s+arka|arka\s+translation)\s*[:：]\s*/i,
     // Japanese preambles
-    /^(?:翻訳結果|以下が翻訳|翻訳は以下|アルカ語に翻訳すると|日本語に翻訳すると)\s*[:：]?\s*/i,
+    /^(?:翻訳結果|以下が翻訳|翻訳は以下|アルカに翻訳すると|日本語に翻訳すると)\s*[:：]?\s*/i,
     /^(?:翻訳|結果)\s*[:：]\s*/,
     // LLM disclaimers and notes at the end
     /(?:\n|\s)*(?:note|notes|注意|備考|補足|explanation|disclaimer)\s*[:：].*$/is,
@@ -291,7 +291,7 @@ class ArkaAIFallback {
 
   // Build a compact Arka grammar reference for the AI prompt
   _buildGrammarContext() {
-    return `## アルカ語（Arka）基本文法
+    return `## アルカ（Arka）基本文法
 
 語順: SVO（主語-動詞-目的語）
 格詞（前置詞に相当）は名詞の後ろに置く: luna e seren = セレンの月
@@ -407,10 +407,10 @@ x=sh(シュ), c=ts(ツ), r=巻き舌r, v=ヴ, f=フ
       let systemPrompt, userPrompt;
 
       if (direction === 'jp-to-arka') {
-        systemPrompt = `あなたはアルカ語（Arka）の専門翻訳家です。アルカ語は人工言語で、SVO語順を持ちます。
+        systemPrompt = `あなたはアルカ（Arka）の専門翻訳家です。アルカは人工言語で、SVO語順を持ちます。
 
 【厳守ルール】
-1. 出力はアルカ語の翻訳文のみ。説明・注釈・コメントは一切付けないこと。
+1. 出力はアルカの翻訳文のみ。説明・注釈・コメントは一切付けないこと。
 2. 英語・中国語・韓国語・その他の言語は絶対に使わないこと。
 3. 辞書にない単語は角括弧[原語]で残すこと（例：[量子]）。
 4. マークダウン記法（**太字**、# 見出し等）は使わないこと。
@@ -420,7 +420,7 @@ ${grammar}${dictExcerpt}`;
 
         userPrompt = text;
       } else {
-        systemPrompt = `あなたはアルカ語（Arka）の専門翻訳家です。アルカ語は人工言語で、SVO語順を持ちます。
+        systemPrompt = `あなたはアルカ（Arka）の専門翻訳家です。アルカは人工言語で、SVO語順を持ちます。
 
 【厳守ルール】
 1. 出力は日本語の翻訳文のみ。説明・注釈・コメントは一切付けないこと。

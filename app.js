@@ -94,11 +94,11 @@
     direction = direction === 'arka-to-jp' ? 'jp-to-arka' : 'arka-to-jp';
     const variantId = engine.getVariant();
     const variantInfo = ArkaVariants && ArkaVariants.VARIANTS[variantId];
-    const arkaLabel = variantInfo ? variantInfo.label : 'アルカ語';
+    const arkaLabel = variantInfo ? variantInfo.label : 'アルカ';
     sourceLang.textContent = direction === 'arka-to-jp' ? arkaLabel : '日本語';
     targetLang.textContent = direction === 'arka-to-jp' ? '日本語' : arkaLabel;
     inputText.placeholder = direction === 'arka-to-jp'
-      ? 'アルカ語のテキストを入力…'
+      ? 'アルカのテキストを入力…'
       : '日本語のテキストを入力…';
     // Clear output
     outputText.innerHTML = '<span class="placeholder-text">翻訳結果がここに表示されます</span>';
@@ -122,9 +122,9 @@
       // Update source label to reflect variant
       const variantInfo = ArkaVariants.VARIANTS[variantId];
       if (direction === 'arka-to-jp') {
-        sourceLang.textContent = variantInfo ? variantInfo.label : 'アルカ語';
+        sourceLang.textContent = variantInfo ? variantInfo.label : 'アルカ';
       } else {
-        targetLang.textContent = variantInfo ? variantInfo.label : 'アルカ語';
+        targetLang.textContent = variantInfo ? variantInfo.label : 'アルカ';
       }
 
       // Clear warning
@@ -627,9 +627,9 @@
       {
         title: '基本語順',
         content: `
-          <p class="grammar-note">アルカ語はSVO (主語-動詞-目的語) の語順です。形容詞は名詞の後に置きます（後置修飾）。</p>
+          <p class="grammar-note">アルカはSVO (主語-動詞-目的語) の語順です。形容詞は名詞の後に置きます（後置修飾）。</p>
           <table class="grammar-table">
-            <thead><tr><th>構造</th><th>アルカ語</th><th>日本語</th></tr></thead>
+            <thead><tr><th>構造</th><th>アルカ</th><th>日本語</th></tr></thead>
             <tbody>
               <tr><td>SVO</td><td class="arka-cell">an klam ti</td><td class="jp-cell">私はあなたを愛する</td></tr>
               <tr><td>後置修飾</td><td class="arka-cell">miik har</td><td class="jp-cell">赤いリンゴ</td></tr>
@@ -642,7 +642,7 @@
         title: '代名詞 (中立位相/seet)',
         content: `
           <table class="grammar-table">
-            <thead><tr><th>アルカ語</th><th>日本語</th><th>備考</th></tr></thead>
+            <thead><tr><th>アルカ</th><th>日本語</th><th>備考</th></tr></thead>
             <tbody>
               <tr><td class="arka-cell">an</td><td class="jp-cell">私</td><td>1人称単数</td></tr>
               <tr><td class="arka-cell">ti</td><td class="jp-cell">あなた</td><td>2人称単数</td></tr>
@@ -670,7 +670,7 @@
         title: '指示詞',
         content: `
           <table class="grammar-table">
-            <thead><tr><th>アルカ語</th><th>日本語</th></tr></thead>
+            <thead><tr><th>アルカ</th><th>日本語</th></tr></thead>
             <tbody>
               <tr><td class="arka-cell">tu</td><td class="jp-cell">これ/この</td></tr>
               <tr><td class="arka-cell">le</td><td class="jp-cell">あれ/あの</td></tr>
@@ -754,7 +754,7 @@
       {
         title: '派生形態 (動副詞・分詞)',
         content: `
-          <p class="grammar-note">アルカ語では動詞や形容詞に接尾辞を付けて副詞や名詞を派生します。</p>
+          <p class="grammar-note">アルカでは動詞や形容詞に接尾辞を付けて副詞や名詞を派生します。</p>
           <table class="grammar-table">
             <thead><tr><th>接尾辞</th><th>名称</th><th>意味</th><th>例</th></tr></thead>
             <tbody>
@@ -834,7 +834,7 @@
         title: '挨拶表現',
         content: `
           <table class="grammar-table">
-            <thead><tr><th>アルカ語</th><th>日本語</th><th>備考</th></tr></thead>
+            <thead><tr><th>アルカ</th><th>日本語</th><th>備考</th></tr></thead>
             <tbody>
               <tr><td class="arka-cell">soonoyun</td><td class="jp-cell">こんにちは/おはよう等</td><td>汎用挨拶</td></tr>
               <tr><td class="arka-cell">sentant</td><td class="jp-cell">ありがとう</td><td>相手が自発的にしてくれたことへ</td></tr>
@@ -850,7 +850,7 @@
       {
         title: '位相 (レジスター) 概要',
         content: `
-          <p class="grammar-note">アルカ語には「位相 (レジスター)」と呼ばれる、話者の性別・年齢・性格に応じた話し方の体系があります。位相によって代名詞・文末純詞・副詞が異なります。</p>
+          <p class="grammar-note">アルカには「位相 (レジスター)」と呼ばれる、話者の性別・年齢・性格に応じた話し方の体系があります。位相によって代名詞・文末純詞・副詞が異なります。</p>
           <table class="grammar-table">
             <thead><tr><th>位相名</th><th>読み</th><th>話者の特徴</th></tr></thead>
             <tbody>
@@ -896,7 +896,7 @@
       {
         title: '敬語接頭辞 (an- / mi-)',
         content: `
-          <p class="grammar-note">アルカ語には日本語の敬語に相当する接頭辞があります。感動詞（挨拶）や文末純詞に付けて丁寧度を上げます。</p>
+          <p class="grammar-note">アルカには日本語の敬語に相当する接頭辞があります。感動詞（挨拶）や文末純詞に付けて丁寧度を上げます。</p>
           <table class="grammar-table">
             <thead><tr><th>接頭辞</th><th>種別</th><th>適用対象</th><th>効果</th></tr></thead>
             <tbody>
@@ -987,7 +987,7 @@
         content: `
           <p class="grammar-note">tuは指示詞「これ」のほか、形式主語 (英語のit) として使われます。天候や状況を表す非人称構文で頻出します。</p>
           <table class="grammar-table">
-            <thead><tr><th>構文</th><th>アルカ語</th><th>日本語</th><th>備考</th></tr></thead>
+            <thead><tr><th>構文</th><th>アルカ</th><th>日本語</th><th>備考</th></tr></thead>
             <tbody>
               <tr><td>形式主語</td><td class="arka-cell">tu et …</td><td class="jp-cell">（それは）…である</td><td>状況や事実を述べる</td></tr>
               <tr><td>例</td><td class="arka-cell">tu et durne e 5 sel</td><td class="jp-cell">5日が経った</td><td>小説冒頭の文</td></tr>
@@ -1031,7 +1031,7 @@
       {
         title: '🔊 発音ルール (アルカ音韻)',
         content: `
-          <p class="grammar-note">アルカ語にはラテン文字ベースのローマ字表記がありますが、英語とは異なる独自の発音規則があります。翻訳結果の横に表示されるカタカナ読みはこのルールに基づいています。</p>
+          <p class="grammar-note">アルカにはラテン文字ベースのローマ字表記がありますが、英語とは異なる独自の発音規則があります。翻訳結果の横に表示されるカタカナ読みはこのルールに基づいています。</p>
           <table class="grammar-table">
             <thead><tr><th>表記</th><th>発音 (IPA)</th><th>日本語近似音</th><th>備考</th></tr></thead>
             <tbody>
@@ -1051,7 +1051,7 @@
       {
         title: '🌿 南方方言 (ルティア語)',
         content: `
-          <p class="grammar-note">ルティア語はアルカ語の南方方言で、アルシェやルティア地方で話されています。関西弁の入力を検出すると、自動的にルティア語風に変換します。</p>
+          <p class="grammar-note">ルティア語はアルカの南方方言で、アルシェやルティア地方で話されています。関西弁の入力を検出すると、自動的にルティア語風に変換します。</p>
           <table class="grammar-table">
             <thead><tr><th>変化規則</th><th>標準アルカ</th><th>ルティア語</th><th>解説</th></tr></thead>
             <tbody>
@@ -1069,9 +1069,9 @@
       {
         title: '🧠 主語推定 (日本語→アルカ)',
         content: `
-          <p class="grammar-note">日本語は主語を省略する言語ですが、アルカ語はSVO語順で主語が必要です。このシステムは文脈から主語を推定して自動補完します。</p>
+          <p class="grammar-note">日本語は主語を省略する言語ですが、アルカはSVO語順で主語が必要です。このシステムは文脈から主語を推定して自動補完します。</p>
           <table class="grammar-table">
-            <thead><tr><th>日本語の文脈</th><th>推定主語</th><th>アルカ語</th><th>理由</th></tr></thead>
+            <thead><tr><th>日本語の文脈</th><th>推定主語</th><th>アルカ</th><th>理由</th></tr></thead>
             <tbody>
               <tr><td class="jp-cell">命令形 (～しろ / ～して)</td><td>2人称</td><td class="arka-cell">ti (あなた)</td><td>命令は相手に向けられる</td></tr>
               <tr><td class="jp-cell">感情表現 (嬉しい / 悲しい)</td><td>1人称</td><td class="arka-cell">an (私)</td><td>感情は話者のもの</td></tr>
@@ -1081,7 +1081,7 @@
               <tr><td class="jp-cell">それ以外</td><td>1人称</td><td class="arka-cell">an (私)</td><td>デフォルト（話者視点）</td></tr>
             </tbody>
           </table>
-          <p class="grammar-note">詩的モードでは、意図的な主語省略を尊重してアルカ語でも主語を補完しません。</p>
+          <p class="grammar-note">詩的モードでは、意図的な主語省略を尊重してアルカでも主語を補完しません。</p>
         `
       },
       {
@@ -1111,9 +1111,9 @@
       {
         title: '数詞体系',
         content: `
-          <p class="grammar-note">アルカ語は10進法です。基数詞は名詞の後に置かれます。</p>
+          <p class="grammar-note">アルカは10進法です。基数詞は名詞の後に置かれます。</p>
           <table class="grammar-table">
-            <thead><tr><th>数</th><th>アルカ語</th><th>数</th><th>アルカ語</th></tr></thead>
+            <thead><tr><th>数</th><th>アルカ</th><th>数</th><th>アルカ</th></tr></thead>
             <tbody>
               <tr><td>0</td><td class="arka-cell">nol</td><td>6</td><td class="arka-cell">mel</td></tr>
               <tr><td>1</td><td class="arka-cell">an</td><td>7</td><td class="arka-cell">vil</td></tr>
