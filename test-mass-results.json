@@ -1,8 +1,92 @@
 {
-  "totalSentences": 135,
-  "fullyTranslated": 135,
-  "partiallyTranslated": 0,
-  "failed": 0,
-  "unknownWords": {},
-  "failedSentences": []
+  "total": 135,
+  "passed": 114,
+  "failed": 21,
+  "passRate": "84.4%",
+  "failures": [
+    {
+      "sentence": "田中さん、今日も元気そうですね。",
+      "translation": "tanaka fis ima [そう]"
+    },
+    {
+      "sentence": "これ、佐藤さんに渡しておいてもらえる？",
+      "translation": "tu satou sef [おいて] [らえる]"
+    },
+    {
+      "sentence": "一葉は、その男の、幼年時代、とでも言うべきであろうか、十歳前後かと推定される頃の写真であって、その子供が大勢の女のひとに取りかこまれ、庭園の池のほとりに、荒い縞の袴をはいて立ち、首を三十度ほど左に傾け、醜く笑っている写真である。",
+      "translation": "ves et lu pikke lazal miv kul [あろう] tia ak na miv sec [あって] lu lazal di feme lan fax hort erel amis vam rein yolo rat xtam nekk bal sor lank mag yam nax xa sec xa"
+    },
+    {
+      "sentence": "謂わば、坐って火鉢に両手をかざしながら、自然に死んでいるような、まことにいまわしい、不吉なにおいのする写真であった。",
+      "translation": "kul skin faisenti las hal kont nel vort xa [ような、] yam yam [おい] [する] sec xa"
+    },
+    {
+      "sentence": "部屋の壁や、小さい火鉢は思い出す事が出来るけれども、その部屋の主人公の顔の印象は、すっと霧消して、どうしても、何としても思い出せない。",
+      "translation": "ez tur limi faisenti et mal vis kal tal lu ez arsen fis nams foil sedo [して] yuu to [して] mal mi"
+    },
+    {
+      "sentence": "生きることは、絶えず何かを失い続けることかもしれない。",
+      "translation": "ikn vis et teom to tifl vis [しれ]"
+    },
+    {
+      "sentence": "古い家の縁側に座り、彼はただ空を見上げていた。",
+      "translation": "sid ra albem skin lu et hot jan [見上げ]"
+    },
+    {
+      "sentence": "先ほどお送りした資料をご覧いただけましたでしょうか。",
+      "translation": "ses sef [した] semas in xa hot [ました]"
+    },
+    {
+      "sentence": "お世話になっております、株式会社山田商事の鈴木と申します。",
+      "translation": "ansoonoyun [株式会社] yamada-shooji suzuki kul"
+    },
+    {
+      "sentence": "ご返信が遅くなりまして、誠に申し訳ございません。",
+      "translation": "sokta demi [まして] yuliet mianteo"
+    },
+    {
+      "sentence": "田中部長、少しお時間をいただけますでしょうか。",
+      "translation": "tanaka [部長] dis miv sentant"
+    },
+    {
+      "sentence": "ご提案の件につきまして、上司と相談の上、改めてご連絡いたします。",
+      "translation": "das vis [つきまして] sei tark hal sam okt xa"
+    },
+    {
+      "sentence": "お客様のご要望に添えるよう、尽力してまいります。",
+      "translation": "an お客 lax xem emii [してまい]"
+    },
+    {
+      "sentence": "資料の修正が完了いたしましたので、改めて送付させていただきます。",
+      "translation": "semas miyu is xa [しました] sam sef ansentant"
+    },
+    {
+      "sentence": "ご承知おきいただければ幸いに存じます。",
+      "translation": "an loki [おき] sentant nau ser"
+    },
+    {
+      "sentence": "田中さん、今日も元気そうやね。",
+      "translation": "tanaka fis ima [そうや]"
+    },
+    {
+      "sentence": "もうええわ、そんな話。",
+      "translation": "an leis [ええ] lu sev"
+    },
+    {
+      "sentence": "昨日、駅で鈴木くんに会ったんやけど、知ってる？",
+      "translation": "toxel 駅で鈴木 akt [んや] tal ser"
+    },
+    {
+      "sentence": "今日は暑いなあ、かなわんわ。",
+      "translation": "fis et hart [たまら]"
+    },
+    {
+      "sentence": "早よしてくれへんかな、もう時間ないねん。",
+      "translation": "foil [してくれ] leis miv"
+    },
+    {
+      "sentence": "そやから言ったやろ、最初から。",
+      "translation": "ti kul [だろう] ves"
+    }
+  ]
 }

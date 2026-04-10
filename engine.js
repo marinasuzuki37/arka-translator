@@ -3195,6 +3195,69 @@ class ArkaEngine {
     'お客様': 'lan',
     '来': 'kal',               // 来る (kanji-only) → come
     'お客': 'lan',             // customer
+
+    // === Round 4: Verb desire/obligation conjugation forms ===
+    // 〜たい (want to ~) → lax = 法副詞「～したい」
+    '死にたい': 'lax vort',       // want to die
+    '死にた': 'lax vort',         // want to die (stem)
+    '行きたい': 'lax ke',         // want to go
+    '行きた': 'lax ke',
+    '食べたい': 'lax kui',        // want to eat
+    '食べた': 'lax kui',
+    '会いたい': 'lax akt',        // want to meet
+    '会いた': 'lax akt',
+    '帰りたい': 'lax kolt',       // want to go home
+    '帰りた': 'lax kolt',
+    '見たい': 'lax in',           // want to see
+    '知りたい': 'lax ser',        // want to know
+    '知りた': 'lax ser',
+    '話したい': 'lax kul',        // want to talk
+    '話した': 'lax kul',
+    '聞きたい': 'lax ter',        // want to hear
+    '聞きた': 'lax ter',
+    '読みたい': 'lax isk',        // want to read
+    '書きたい': 'lax axt',        // want to write
+    '歩きたい': 'lax luk',        // want to walk
+    '走りたい': 'lax lef',        // want to run
+    '眠りたい': 'lax mok',        // want to sleep
+    '泳ぎたい': 'lax loks',       // want to swim
+    '飛びたい': 'lax left',       // want to fly
+    'たい': '',                   // desire suffix alone → drop
+    // 〜なきゃいけない / 〜なければならない (must ~) → fal = 法副詞「～すべき」
+    '生きなきゃいけない': 'fal ikn',  // must live
+    '生きなきゃ': 'fal ikn',         // must live (contracted)
+    '生きなければならない': 'fal ikn', // must live (formal)
+    '行かなきゃいけない': 'fal ke',   // must go
+    '行かなきゃ': 'fal ke',
+    '行かなければならない': 'fal ke',  // must go (formal)
+    '食べなきゃいけない': 'fal kui',   // must eat
+    '食べなきゃ': 'fal kui',
+    '帰らなきゃいけない': 'fal kolt',  // must go home
+    '帰らなきゃ': 'fal kolt',
+    '死ななきゃいけない': 'fal vort',  // must die
+    'しなきゃいけない': '',    // must do → drop (auxiliary)
+    'しなきゃ': '',
+    'なきゃいけない': '',       // must (suffix alone) → drop
+    'なきゃ': '',                // must (contracted suffix) → drop
+    'なければならない': '',    // must (formal suffix) → drop
+    'いけない': '',             // can't (as obligation suffix) → drop
+    // 〜てはいけない (must not ~) → fal ~ mi
+    '死んではいけない': 'fal vort mi',  // must not die
+    '行ってはいけない': 'fal ke mi',    // must not go
+    // 〜けど / けれど (but) → tal = 文頭純詞「しかし」
+    'けど': 'tal',               // but (conjunction)
+    'けれど': 'tal',             // but (formal)
+    'けれども': 'tal',           // but
+    'だけど': 'tal',             // but
+    'だが': 'tal',               // but (formal)
+    // Verb stems that leak
+    '生き': 'ikn',              // 生きる stem
+    '死に': 'vort',             // 死ぬに-form
+    '死': 'vort',               // 死 (kanji alone)
+    '生': 'ikn',                // 生 (kanji alone)
+    '死ぬ': 'vort',             // die
+    '死んだ': 'vort',           // died
+    '死んで': 'vort',           // dying (te-form)
   };
 
   // --- Japanese → Arka Translation ---
@@ -3281,10 +3344,14 @@ class ArkaEngine {
     const waIdx = text.indexOf('は');
     if (waIdx <= 0 || waIdx >= text.length - 1) return null;
 
+    // ては/では is a grammatical construction, NOT topic marker + copula
+    // e.g., 死んではいけない, 食べてはいけない, 行ってはいけない
+    const beforeWa = text[waIdx - 1];
+    if (beforeWa === 'て' || beforeWa === 'で') return null;
+
     // Verify は is preceded by content (not part of a word like はし)
     // Also allow __PRONOUN_xxx__ tokens (from nuance preprocessing)
     const textBeforeWa = text.slice(0, waIdx).trim();
-    const beforeWa = text[waIdx - 1];
     const isPronounToken = /__PRONOUN_\w+__\s*$/.test(textBeforeWa) || /__$/.test(textBeforeWa);
     if (!isPronounToken && !/[ぁ-ん々ー\u4e00-\u9fff\u30a0-\u30ff]/.test(beforeWa)) return null;
 
@@ -3991,14 +4058,19 @@ class ArkaEngine {
         while (cleaned.length > 1 && FINAL_PARTICLES.has(cleaned[cleaned.length - 1])) {
           cleaned = cleaned.slice(0, -1);
         }
-        // Strip known grammar suffixes from the end
-        for (const suf of GRAMMAR_SUFFIXES) {
-          if (cleaned.endsWith(suf) && cleaned.length > suf.length) {
-            // Only strip if what remains has content
-            const before = cleaned.slice(0, -suf.length);
-            if (before.length >= 1) {
-              cleaned = before;
-              break;
+        // Before stripping grammar suffixes, check if the whole segment
+        // (or a long prefix) matches an override — prevents breaking compound overrides
+        // like 死んではいけない, 生きなきゃいけない, etc.
+        if (!ArkaEngine.JP_ARKA_OVERRIDES[cleaned]) {
+          // Strip known grammar suffixes from the end
+          for (const suf of GRAMMAR_SUFFIXES) {
+            if (cleaned.endsWith(suf) && cleaned.length > suf.length) {
+              // Only strip if what remains has content
+              const before = cleaned.slice(0, -suf.length);
+              if (before.length >= 1) {
+                cleaned = before;
+                break;
+              }
             }
           }
         }
@@ -4019,6 +4091,10 @@ class ArkaEngine {
           let particleSkipped = false;
           for (const p of PARTICLES_MULTI) {
             if (remaining.startsWith(p) && remaining.length === p.length) {
+              // If this particle has a non-empty override, keep it as a token
+              if (ArkaEngine.JP_ARKA_OVERRIDES[p] && ArkaEngine.JP_ARKA_OVERRIDES[p] !== '') {
+                result.push(p);
+              }
               remaining = '';
               particleSkipped = true;
               break;
@@ -4067,7 +4143,13 @@ class ArkaEngine {
                 if (stem.length >= 2 && (ArkaEngine.JP_ARKA_OVERRIDES[stem] || this.reverseMap.has(stem))) {
                   result.push(stem);
                   remaining = remaining.slice(stem.length);
-                  if (remaining.startsWith(p)) remaining = remaining.slice(p.length);
+                  if (remaining.startsWith(p)) {
+                    // If this particle has a non-empty override, keep it as a token
+                    if (ArkaEngine.JP_ARKA_OVERRIDES[p] && ArkaEngine.JP_ARKA_OVERRIDES[p] !== '') {
+                      result.push(p);
+                    }
+                    remaining = remaining.slice(p.length);
+                  }
                   found = true;
                   break;
                 }
@@ -4100,6 +4182,10 @@ class ArkaEngine {
                   if (unmatched) {
                     result.push(unmatched);
                     unmatched = '';
+                  }
+                  // If this particle has a non-empty override, keep it as a token
+                  if (ArkaEngine.JP_ARKA_OVERRIDES[mp] && ArkaEngine.JP_ARKA_OVERRIDES[mp] !== '') {
+                    result.push(mp);
                   }
                   remaining = remaining.slice(mp.length);
                   multiSkipped = true;
