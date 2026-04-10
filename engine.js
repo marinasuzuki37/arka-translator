@@ -1157,63 +1157,38 @@ class ArkaEngine {
       return result;
     }
 
-    // Check sentence particles (文頭/文末純詞) - BEFORE pronouns so 'tio', 'taik' etc. are caught
-    if (ArkaEngine.SENTENCE_PARTICLES[lower]) {
-      result.type = 'sentence_particle';
-      result.meaning = ArkaEngine.SENTENCE_PARTICLES[lower];
+    // --- Static table lookups (order matters: sentence_particles before pronouns, conjunctions before particles) ---
+    const STATIC_TABLES = [
+      { table: ArkaEngine.SENTENCE_PARTICLES, type: 'sentence_particle' },
+      { table: ArkaEngine.PRONOUNS,           type: 'pronoun' },
+      { table: ArkaEngine.CONJUNCTIONS,       type: 'conjunction' },
+      { table: ArkaEngine.CASE_PARTICLES,     type: 'particle' },
+      { table: ArkaEngine.MODAL_ADVERBS,      type: 'modal' },
+      { table: ArkaEngine.IMPERATIVES,        type: 'imperative' },
+      { table: ArkaEngine.TENSE_MARKERS,      type: 'tense' },
+      { table: ArkaEngine.GRAMMAR_WORDS,      type: 'word' },
+    ];
+    for (const { table, type } of STATIC_TABLES) {
+      if (table[lower]) {
+        result.type = type;
+        result.meaning = table[lower];
+        return result;
+      }
+    }
+
+    // Fixed-word checks (negation, passive, causative)
+    const FIXED_WORDS = {
+      'en':   { type: 'negation',  meaning: '否定(～ない)' },
+      'yu':   { type: 'passive',   meaning: '受身(～される)' },
+      'sols': { type: 'causative', meaning: '使役(～させる)' },
+    };
+    if (FIXED_WORDS[lower]) {
+      result.type = FIXED_WORDS[lower].type;
+      result.meaning = FIXED_WORDS[lower].meaning;
       return result;
     }
 
-    // Check pronouns
-    if (ArkaEngine.PRONOUNS[lower]) {
-      result.type = 'pronoun';
-      result.meaning = ArkaEngine.PRONOUNS[lower];
-      return result;
-    }
-
-    // Check conjunctions BEFORE particles (so 'tal', 'mon', 'del' etc. are caught)
-    if (ArkaEngine.CONJUNCTIONS[lower]) {
-      result.type = 'conjunction';
-      result.meaning = ArkaEngine.CONJUNCTIONS[lower];
-      return result;
-    }
-
-    // Check case particles
-    if (ArkaEngine.CASE_PARTICLES[lower]) {
-      result.type = 'particle';
-      result.meaning = ArkaEngine.CASE_PARTICLES[lower];
-      return result;
-    }
-
-    // Check modal adverbs (includes 'em')
-    if (ArkaEngine.MODAL_ADVERBS[lower]) {
-      result.type = 'modal';
-      result.meaning = ArkaEngine.MODAL_ADVERBS[lower];
-      return result;
-    }
-
-    // Check imperatives
-    if (ArkaEngine.IMPERATIVES[lower]) {
-      result.type = 'imperative';
-      result.meaning = ArkaEngine.IMPERATIVES[lower];
-      return result;
-    }
-
-    // Check tense markers
-    if (ArkaEngine.TENSE_MARKERS[lower]) {
-      result.type = 'tense';
-      result.meaning = ArkaEngine.TENSE_MARKERS[lower];
-      return result;
-    }
-
-    // Check negation prefix
-    if (lower === 'en') {
-      result.type = 'negation';
-      result.meaning = '否定(～ない)';
-      return result;
-    }
-
-    // Check special negation pairs
+    // Special negation pairs (et/de, til/si, etc.)
     for (const [pos, info] of Object.entries(ArkaEngine.SPECIAL_NEGATION)) {
       if (lower === pos || lower === info.neg) {
         result.type = 'special';
@@ -1222,32 +1197,11 @@ class ArkaEngine {
       }
     }
 
-    // Check passive marker
-    if (lower === 'yu') {
-      result.type = 'passive';
-      result.meaning = '受身(～される)';
-      return result;
-    }
-
-    // Check causative
-    if (lower === 'sols') {
-      result.type = 'causative';
-      result.meaning = '使役(～させる)';
-      return result;
-    }
-
-    // Check register-specific variants (rente te=de, etc.)
+    // Register-specific variants (rente te=de, etc.)
     if (ArkaEngine.REGISTER_VARIANTS[lower]) {
       const rv = ArkaEngine.REGISTER_VARIANTS[lower];
       result.type = rv.type === 'negation' ? 'special' : 'word';
       result.meaning = rv.meaning;
-      return result;
-    }
-
-    // Check grammar words (sein, atu, xok, etc.)
-    if (ArkaEngine.GRAMMAR_WORDS[lower]) {
-      result.type = 'word';
-      result.meaning = ArkaEngine.GRAMMAR_WORDS[lower];
       return result;
     }
 
@@ -1260,46 +1214,31 @@ class ArkaEngine {
       return result;
     }
 
-    // Try stripping ASPECT suffixes first (higher priority)
-    for (const asp of ArkaEngine.ASPECT_SUFFIXES) {
-      if (lower.endsWith(asp.suffix) && lower.length > asp.suffix.length + 1) {
-        const stem = lower.slice(0, -asp.suffix.length);
+    // --- Affix stripping: suffixes (aspect → derivational), then prefixes ---
+    const ALL_SUFFIXES = [...ArkaEngine.ASPECT_SUFFIXES, ...ArkaEngine.DERIVATIONAL_SUFFIXES];
+    for (const suf of ALL_SUFFIXES) {
+      if (lower.endsWith(suf.suffix) && lower.length > suf.suffix.length + 1) {
+        const stem = lower.slice(0, -suf.suffix.length);
         entry = this.lookupArka(stem);
         if (entry) {
           result.root = stem;
           result.entry = entry;
           result.type = 'word';
-          result.suffixes.push({ form: asp.suffix, label: asp.meaning, jp: asp.jp });
+          result.suffixes.push({ form: suf.suffix, label: suf.meaning, jp: suf.jp });
           result.meaning = this._extractCoreMeaning(entry.meaning);
           return result;
         }
       }
     }
 
-    // Try stripping DERIVATIONAL suffixes (動副詞 -el, 分詞 -an/-ol, etc.)
-    for (const deriv of ArkaEngine.DERIVATIONAL_SUFFIXES) {
-      if (lower.endsWith(deriv.suffix) && lower.length > deriv.suffix.length + 1) {
-        const stem = lower.slice(0, -deriv.suffix.length);
-        entry = this.lookupArka(stem);
-        if (entry) {
-          result.root = stem;
-          result.entry = entry;
-          result.type = 'word';
-          result.suffixes.push({ form: deriv.suffix, label: deriv.meaning, jp: deriv.jp });
-          result.meaning = this._extractCoreMeaning(entry.meaning);
-          return result;
-        }
-      }
-    }
-
-    // Try compound: strip common prefixes (al-, en-, etc.)
-    const prefixes = [
+    // Compound prefixes (al-, ax-, on-, en-)
+    const COMPOUND_PREFIXES = [
       { prefix: 'al', meaning: '反/逆' },
       { prefix: 'ax', meaning: '超/極' },
       { prefix: 'on', meaning: '続' },
       { prefix: 'en', meaning: '非/無' },
     ];
-    for (const pfx of prefixes) {
+    for (const pfx of COMPOUND_PREFIXES) {
       if (lower.startsWith(pfx.prefix) && lower.length > pfx.prefix.length + 1) {
         const stem = lower.slice(pfx.prefix.length);
         entry = this.lookupArka(stem);
@@ -1508,157 +1447,68 @@ class ArkaEngine {
       allBreakdown.push(...analyzed);
 
       const jpParts = [];
-      let i = 0;
       let isNegated = false;
       let imperative = null;
-      let tenseAdverb = null;
-      let modalAdverb = null;
 
-      while (i < analyzed.length) {
-        const a = analyzed[i];
+      // Types that simply output their meaning
+      const PASS_THROUGH_TYPES = new Set([
+        'sentence_particle', 'conjunction', 'greeting', 'number', 'pronoun'
+      ]);
 
-        // Handle negation prefix
-        if (a.type === 'negation') {
-          isNegated = true;
-          i++;
-          continue;
-        }
+      for (const a of analyzed) {
+        // State-setting tokens (consumed, not output directly)
+        if (a.type === 'negation') { isNegated = true; continue; }
+        if (a.type === 'imperative') { imperative = a; continue; }
 
-        // Handle imperatives
-        if (a.type === 'imperative') {
-          imperative = a;
-          i++;
-          continue;
-        }
+        // Modal adverbs — output meaning, track for context
+        if (a.type === 'modal') { jpParts.push(a.meaning); continue; }
 
-        // Handle tense/modal adverbs
-        if (a.type === 'modal') {
-          if (['sil'].includes(a.original.toLowerCase())) {
-            tenseAdverb = a;
-          } else {
-            modalAdverb = a;
-          }
-          jpParts.push(a.meaning);
-          i++;
-          continue;
-        }
-
-        // Handle tense markers
+        // Tense markers — append to previous word
         if (a.type === 'tense') {
-          // Don't output standalone — it modifies previous verb
-          if (jpParts.length > 0) {
-            jpParts[jpParts.length - 1] += a.meaning;
-          } else {
-            jpParts.push(a.meaning);
-          }
-          i++;
+          if (jpParts.length > 0) jpParts[jpParts.length - 1] += a.meaning;
+          else jpParts.push(a.meaning);
           continue;
         }
 
-        // Handle sentence particles
-        if (a.type === 'sentence_particle') {
-          jpParts.push(a.meaning);
-          i++;
-          continue;
-        }
+        // Simple pass-through types
+        if (PASS_THROUGH_TYPES.has(a.type)) { jpParts.push(a.meaning); continue; }
 
-        // Handle conjunctions
-        if (a.type === 'conjunction') {
-          jpParts.push(a.meaning);
-          i++;
-          continue;
-        }
+        // Particles — strip leading ～
+        if (a.type === 'particle') { jpParts.push(a.meaning.replace(/^～/g, '')); continue; }
 
-        // Handle greetings
-        if (a.type === 'greeting') {
-          jpParts.push(a.meaning);
-          i++;
-          continue;
-        }
-
-        // Handle numbers
-        if (a.type === 'number') {
-          jpParts.push(a.meaning);
-          i++;
-          continue;
-        }
-
-        // Handle pronouns
-        if (a.type === 'pronoun') {
-          jpParts.push(a.meaning);
-          i++;
-          continue;
-        }
-
-        // Handle particles
-        if (a.type === 'particle') {
-          jpParts.push(a.meaning.replace(/^～/g, ''));
-          i++;
-          continue;
-        }
-
-        // Handle passive
+        // Passive — modify previous word
         if (a.type === 'passive') {
-          const lastIdx = jpParts.length - 1;
-          if (lastIdx >= 0) {
-            jpParts[lastIdx] = jpParts[lastIdx] + '(受身)';
-          }
-          i++;
+          if (jpParts.length > 0) jpParts[jpParts.length - 1] += '(受身)';
           continue;
         }
 
-        // Handle causative
-        if (a.type === 'causative') {
-          jpParts.push('～させる');
-          i++;
-          continue;
-        }
+        // Causative
+        if (a.type === 'causative') { jpParts.push('～させる'); continue; }
 
-        // Handle special pairs (et/de, til/si, etc.)
+        // Special pairs (et/de, til/si, etc.) — pick positive or negative form
         if (a.type === 'special') {
-          const lower = a.original.toLowerCase();
-          if (ArkaEngine.NEGATION_WORDS.has(lower)) {
-            jpParts.push(a.meaning.split('/')[1] || a.meaning);
-          } else {
-            jpParts.push(a.meaning.split('/')[0] || a.meaning);
-          }
-          i++;
+          const isNeg = ArkaEngine.NEGATION_WORDS.has(a.original.toLowerCase());
+          jpParts.push(a.meaning.split('/')[isNeg ? 1 : 0] || a.meaning);
           continue;
         }
 
-        // Handle regular words
+        // Regular words — apply suffixes, negation, imperative
         if (a.type === 'word') {
           let jp = a.meaning;
-          // Apply suffixes
-          for (const suf of a.suffixes) {
-            jp += suf.jp;
-          }
-          // Apply prefixes
-          for (const pfx of a.prefixes) {
-            // Already handled in meaning
-          }
-          // Apply negation
-          if (isNegated) {
-            jp += 'ない';
-            isNegated = false;
-          }
-          // Apply imperative
+          for (const suf of a.suffixes) jp += suf.jp;
+          if (isNegated) { jp += 'ない'; isNegated = false; }
           if (imperative) {
             const imp = imperative.original.toLowerCase();
-            if (imp === 're') jp += '(しろ)';
-            else if (imp === 'den') jp += '(するな)';
-            else if (imp === 'mir') jp += '(してください)';
-            else if (imp === 'fon') jp += '(しないで)';
+            const IMPERATIVE_MAP = { 're': '(しろ)', 'den': '(するな)', 'mir': '(してください)', 'fon': '(しないで)' };
+            jp += IMPERATIVE_MAP[imp] || '';
             imperative = null;
           }
           jpParts.push(jp);
-          i++;
           continue;
         }
 
-        // Unknown words — pass through original
+        // Unknown — pass through original
         jpParts.push(a.original);
-        i++;
       }
 
       fullTranslation += jpParts.join(' ') + ' ';
