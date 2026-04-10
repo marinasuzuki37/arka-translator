@@ -1,0 +1,274 @@
+{
+  "pronouns": {
+    "standard": {
+      "1sg": "an",
+      "1sg_poss": "ant",
+      "1pl": "ans",
+      "1pl_poss": "anso",
+      "2sg": "ti",
+      "2sg_poss": "tiil",
+      "2pl": "tiis",
+      "2pl_poss": "tiiso",
+      "3sg": "lu/la",
+      "3sg_poss": "luut/laat",
+      "3pl": "luus/laas"
+    },
+    "milia": {
+      "1sg": "non",
+      "1sg_poss": "noan",
+      "label": "女性語",
+      "note": "nonは丁寧な一人称。女性が使う。"
+    },
+    "mayu": {
+      "1sg": "noel",
+      "1sg_poss": "notte",
+      "2sg": "xian",
+      "2sg_poss": "xiant",
+      "1pl": "xenon",
+      "1pl_poss": "xenoan",
+      "2pl": "telul",
+      "2pl_poss": "telet",
+      "label": "古語（まゆ位相）",
+      "note": "ぞんざいで古風な話し方"
+    },
+    "yuul": {
+      "1sg": "ami",
+      "1sg_poss": "amit",
+      "2sg": "tol",
+      "1pl": "sean",
+      "1pl_poss": "seant",
+      "2pl": "flent",
+      "2pl_poss": "flandol",
+      "label": "男性語（ゆーる位相）",
+      "note": "男性的な話し方"
+    },
+    "yunk": {
+      "1sg": "yuna",
+      "1sg_poss": "yunol",
+      "2sg": "moe",
+      "2sg_poss": "moen",
+      "1pl": "kolet",
+      "1pl_poss": "ekol",
+      "2pl": "felie",
+      "2pl_poss": "felial",
+      "label": "鳥籠姫位相",
+      "note": "上品で控えめな話し方"
+    },
+    "rente": {
+      "label": "幼児語",
+      "note": "幼い話し方。deの代わりにteなど。"
+    }
+  },
+  "sentence_particles": {
+    "sei": {
+      "meaning": "推量/不確実",
+      "ja": "～だろうか",
+      "register": "standard"
+    },
+    "in": {
+      "meaning": "視覚推量",
+      "ja": "～のようだ（見た感じ）",
+      "register": "standard"
+    },
+    "xan": {
+      "meaning": "気付き",
+      "ja": "～だったのか",
+      "register": "standard"
+    },
+    "na": {
+      "meaning": "感覚推量",
+      "ja": "～のようだ（感じで）",
+      "register": "standard"
+    },
+    "ter": {
+      "meaning": "聴覚推量",
+      "ja": "～のようだ（聞いた感じ）",
+      "register": "standard"
+    },
+    "tisee": {
+      "meaning": "情報提供",
+      "ja": "～なのだ（知らせ）",
+      "register": "standard"
+    },
+    "kok": {
+      "meaning": "同意要求",
+      "ja": "～だよね？",
+      "register": "standard"
+    },
+    "dec": {
+      "meaning": "否定確認",
+      "ja": "～じゃないよね？",
+      "register": "standard"
+    },
+    "sin": {
+      "meaning": "嫌悪",
+      "ja": "～なんて（嫌悪）",
+      "register": "standard"
+    },
+    "ses": {
+      "meaning": "過去確認",
+      "ja": "～だった",
+      "register": "standard"
+    },
+    "dac": {
+      "meaning": "確認",
+      "ja": "～でしょ？",
+      "register": "standard"
+    },
+    "eyo": {
+      "meaning": "推量",
+      "ja": "～かなぁ",
+      "register": "milia",
+      "base": "sei"
+    },
+    "sete": {
+      "meaning": "同意要求",
+      "ja": "～よね？",
+      "register": "milia",
+      "base": "kok"
+    },
+    "tisse": {
+      "meaning": "情報提供",
+      "ja": "～なのよ",
+      "register": "milia",
+      "base": "tisee"
+    },
+    "tissen": {
+      "meaning": "情報提供(強)",
+      "ja": "～なのよね",
+      "register": "milia",
+      "base": "tisse"
+    },
+    "deeln": {
+      "meaning": "否定確認",
+      "ja": "～じゃないの？",
+      "register": "milia",
+      "base": "dec"
+    },
+    "puppu": {
+      "meaning": "不満",
+      "ja": "もうっ！",
+      "register": "milia"
+    },
+    "au": {
+      "meaning": "確認",
+      "ja": "～でしょ？",
+      "register": "rente",
+      "base": "dac"
+    },
+    "aan": {
+      "meaning": "詠嘆",
+      "ja": "～だなぁ",
+      "register": "rente"
+    },
+    "deel": {
+      "meaning": "否定確認",
+      "ja": "～じゃないよね？",
+      "register": "rente",
+      "base": "dec"
+    },
+    "nonno": {
+      "meaning": "返事促し",
+      "ja": "～だよね？",
+      "register": "yunte"
+    },
+    "sanna": {
+      "meaning": "同意要求",
+      "ja": "～よね",
+      "register": "mayu",
+      "base": "sete"
+    },
+    "enxe": {
+      "meaning": "推量",
+      "ja": "～かなぁ",
+      "register": "mayu",
+      "base": "eyo"
+    },
+    "xiima": {
+      "meaning": "情報提供",
+      "ja": "～なのよ",
+      "register": "mayu",
+      "base": "tisee"
+    },
+    "fixet": {
+      "meaning": "推量",
+      "ja": "～だろうか",
+      "register": "yuul",
+      "base": "sei"
+    },
+    "ranxel": {
+      "meaning": "同意要求",
+      "ja": "～だよな",
+      "register": "yuul",
+      "base": "kok"
+    },
+    "flenzel": {
+      "meaning": "情報提供",
+      "ja": "～なんだ",
+      "register": "yuul",
+      "base": "tisee"
+    },
+    "yuulia": {
+      "meaning": "情報提供(丁寧)",
+      "ja": "～でございますの",
+      "register": "yunk",
+      "base": "tisee"
+    },
+    "malia": {
+      "meaning": "同意要求",
+      "ja": "～ですわよね",
+      "register": "yunk",
+      "base": "kok"
+    },
+    "axem": {
+      "meaning": "同意要求",
+      "ja": "～ですわよね",
+      "register": "yunk",
+      "base": "kok"
+    }
+  },
+  "modal_adverbs": {
+    "lax": "～したい",
+    "lan": "～したい",
+    "ris": "～したくない",
+    "rin": "～したくない",
+    "sen": "～できる",
+    "vil": "～できない",
+    "fal": "～すべき",
+    "xaf": "～しなければならない",
+    "sil": "～する(未来)",
+    "van": "～するつもり",
+    "fan": "～するつもり",
+    "em": "～するようになる",
+    "kit": "～し始める",
+    "terk": "～しに出掛ける",
+    "dia": "～しよう(勧誘/rente)",
+    "das": "～しよう(勧誘)",
+    "sant": "～してほしい(弱依頼)",
+    "myun": "～してほしい(女性語)",
+    "lut": "通時(ずっと)",
+    "tur": "今から(現在)"
+  },
+  "honorific_prefixes": {
+    "an-": {
+      "type": "丁寧",
+      "applies_to": "感動詞・文末純詞",
+      "effect": "丁寧にする",
+      "examples": [
+        "ansentant(ありがとうございます)",
+        "ansoonoyun(こんにちは)",
+        "ansete(～よね/丁寧)"
+      ]
+    },
+    "mi-": {
+      "type": "敬語(名詞)",
+      "applies_to": "名詞・感動詞",
+      "effect": "「お～」を付ける。敬語の接頭辞",
+      "examples": [
+        "miseere(ありがとうございます)",
+        "mikekko(いらっしゃいませ)",
+        "misolvat(お待たせ致しました)"
+      ]
+    }
+  }
+}
