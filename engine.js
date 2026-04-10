@@ -1,6 +1,7 @@
-// ===== ARKA TRANSLATION ENGINE v3.0 =====
+// ===== ARKA TRANSLATION ENGINE v4.0 =====
 // Enhanced with melidia wiki parallel corpus data
 // + Subject inference, Kansai→Southern dialect, Pronunciation guide, Poetry mode
+// + Translation mode support: 新生アルカ/制アルカ/古アルカ/俗アルカ
 
 class ArkaEngine {
   constructor() {
@@ -10,6 +11,17 @@ class ArkaEngine {
     this.sentenceMemory = [];      // parallel corpus for sentence-level matching
     this.greetingsMap = new Map(); // greeting word → Japanese meaning
     this.ready = false;
+    this.currentVariant = 'shinsee'; // Default: 新生アルカ
+  }
+
+  setVariant(variantId) {
+    if (ArkaVariants && ArkaVariants.VARIANTS[variantId]) {
+      this.currentVariant = variantId;
+    }
+  }
+
+  getVariant() {
+    return this.currentVariant;
   }
 
   // --- Initialize with dictionary data ---
@@ -472,13 +484,18 @@ class ArkaEngine {
     reading = reading.replace(/ya/g, 'ヤ').replace(/yi/g, 'イ').replace(/yu/g, 'ユ').replace(/ye/g, 'イェ').replace(/yo/g, 'ヨ');
     reading = reading.replace(/wa/g, 'ワ').replace(/wi/g, 'ウィ').replace(/wu/g, 'ウ').replace(/we/g, 'ウェ').replace(/wo/g, 'ウォ');
     reading = reading.replace(/fa/g, 'ファ').replace(/fi/g, 'フィ').replace(/fu/g, 'フ').replace(/fe/g, 'フェ').replace(/fo/g, 'フォ');
+    reading = reading.replace(/f/g, 'フ');  // standalone f
     reading = reading.replace(/va/g, 'ヴァ').replace(/vi/g, 'ヴィ').replace(/vu/g, 'ヴ').replace(/ve/g, 'ヴェ').replace(/vo/g, 'ヴォ');
+    reading = reading.replace(/v/g, 'ヴ');  // standalone v
     reading = reading.replace(/la/g, 'ラ').replace(/li/g, 'リ').replace(/lu/g, 'ル').replace(/le/g, 'レ').replace(/lo/g, 'ロ');
     reading = reading.replace(/l/g, 'ル');
     reading = reading.replace(/ra/g, 'ラ').replace(/ri/g, 'リ').replace(/ru/g, 'ル').replace(/re/g, 'レ').replace(/ro/g, 'ロ');
     reading = reading.replace(/r/g, 'ル');
     reading = reading.replace(/na/g, 'ナ').replace(/ni/g, 'ニ').replace(/nu/g, 'ヌ').replace(/ne/g, 'ネ').replace(/no/g, 'ノ');
+    // n before consonant or end of string → ン
+    // Must handle both latin consonants and already-converted katakana
     reading = reading.replace(/n([^aiueoアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヴ])/g, 'ン$1');
+    reading = reading.replace(/n([\u30A0-\u30FF])/g, 'ン$1');  // n before any katakana (already converted)
     reading = reading.replace(/n$/g, 'ン');
     reading = reading.replace(/ma/g, 'マ').replace(/mi/g, 'ミ').replace(/mu/g, 'ム').replace(/me/g, 'メ').replace(/mo/g, 'モ');
     reading = reading.replace(/m/g, 'ム');
@@ -690,9 +707,390 @@ class ArkaEngine {
       const avgLen = lines.reduce((s, l) => s + l.length, 0) / lines.length;
       if (avgLen < 20) return true;
     }
-    // Very short, no punctuation = likely poetic fragment
-    if (text.length < 15 && !/[。、！？!?,.]/.test(text)) return true;
+    // Very short, no punctuation, AND contains literary kanji = likely poetic fragment
+    // (Don't trigger on normal short sentences like greetings or simple statements)
+    const literaryKanji = /[儚脆散朽枯滅彷徊魂翼闇光涙夢運命絶望希望永遠寒空]/;
+    if (text.length < 15 && !/[。、！？!?,.]/.test(text) && literaryKanji.test(text)) return true;
+    // Detect literary/poetic compound expressions (require STRONG signals)
+    // Weak signals like ている/ていく alone are not enough — they appear in regular text
+    const strongPoeticPatterns = /(にゆく|りゆく|えゆく|みゆく|ながら|つつ|のまま|のように|果てない|尽きない|終わりなき|儚い|脆く|散りゆく|朽ちていく|消えていく|枯れていく|崩れていく)/;
+    if (strongPoeticPatterns.test(text)) return true;
     return false;
+  }
+
+  // ===== POETIC / FREE TRANSLATION ENGINE =====
+  // Decomposes Japanese literary compound expressions into semantic phrases,
+  // then composes natural Arka sentences with proper grammar.
+
+  // --- Compound expression patterns (order matters: longest first) ---
+  static POETIC_COMPOUND_PATTERNS = [
+    // Progressive/directional V+ていく = gradually (aspect: -or = in progress)
+    { pattern: /(死にゆく)/g, replace: '_DYING_' },
+    { pattern: /(散りゆく)/g, replace: '_SCATTERING_' },
+    { pattern: /(消えゆく)/g, replace: '_FADING_' },
+    { pattern: /(枯れゆく)/g, replace: '_WITHERING_' },
+    { pattern: /(崩れゆく)/g, replace: '_COLLAPSING_' },
+    { pattern: /(沈みゆく)/g, replace: '_SINKING_' },
+    { pattern: /(朵ちていく)/g, replace: '_DECAYING_' },
+    { pattern: /(朽ちていく)/g, replace: '_DECAYING_' },
+    { pattern: /(消えていく)/g, replace: '_FADING_' },
+    { pattern: /(枯れていく)/g, replace: '_WITHERING_' },
+    { pattern: /(壊れていく)/g, replace: '_CRUMBLING_' },
+    { pattern: /(流れていく)/g, replace: '_FLOWING_AWAY_' },
+    { pattern: /(溜けていく)/g, replace: '_DISSOLVING_' },
+    { pattern: /(崩れていく)/g, replace: '_COLLAPSING_' },
+    { pattern: /(沈んでいく)/g, replace: '_SINKING_' },
+    { pattern: /(磨り減っていく)/g, replace: '_ERODING_' },
+    { pattern: /(薄れていく)/g, replace: '_THINNING_' },
+    { pattern: /(強くなっていく)/g, replace: '_STRENGTHENING_' },
+    { pattern: /(光り続ける)/g, replace: '_SHINING_ON_' },
+    // V+にゆく = heading toward
+    { pattern: /([\u4E00-\u9FFF\u3040-\u309F]+)にゆく/g, handler: '_TOWARD_' },
+    // V+ながら = while doing
+    { pattern: /([\u4E00-\u9FFF\u3040-\u309F]+)ながら/g, handler: '_WHILE_' },
+    // V+つつ = while / in the process of
+    { pattern: /([\u4E00-\u9FFF\u3040-\u309F]+)つつ/g, handler: '_WHILE_' },
+    // Adj+くて = being adj and...
+    // 果てない/尽きない = endless
+    { pattern: /果てない/g, replace: '_ENDLESS_' },
+    { pattern: /尽きない/g, replace: '_ENDLESS_' },
+    { pattern: /終わりなき/g, replace: '_ENDLESS_' },
+    { pattern: /終わらない/g, replace: '_ENDLESS_' },
+    { pattern: /限りない/g, replace: '_ENDLESS_' },
+    // のように = like/as (simile)
+    { pattern: /のように/g, replace: '_LIKE_' },
+    { pattern: /ように/g, replace: '_LIKE_' },
+    // V+ている generic
+    { pattern: /([\u4E00-\u9FFF\u3040-\u309F]+)ている/g, handler: '_CONTINUOUS_' },
+    // V+ていく generic progressive
+    { pattern: /([\u4E00-\u9FFF\u3040-\u309F]+)ていく/g, handler: '_PROGRESSIVE_' },
+  ];
+
+  // Mapping of compound tokens to Arka expressions
+  static POETIC_TOKEN_MAP = {
+    '_DYING_': { words: ['vortor'], meaning: '死にゆく', note: 'vort+or(経過相)' },
+    '_DECAYING_': { words: ['greinor'], meaning: '朽ちていく', note: 'grein+or' },
+    '_FADING_': { words: ['sedor'], meaning: '消えていく', note: 'sedo+or' },
+    '_WITHERING_': { words: ['almansor'], meaning: '枯れていく', note: 'almans+or' },
+    '_CRUMBLING_': { words: ['klemar'], meaning: '壊れていく', note: 'klema+or' },
+    '_FLOWING_AWAY_': { words: ['leir'], meaning: '流れていく', note: 'lei+or' },
+    '_DISSOLVING_': { words: ['sedor'], meaning: '溜けていく', note: 'sedo+or' },
+    '_COLLAPSING_': { words: ['vernor'], meaning: '崩れていく', note: 'vern+or' },
+    '_SINKING_': { words: ['mendor'], meaning: '沈んでいく', note: 'mend+or' },
+    '_ERODING_': { words: ['greinor'], meaning: '磨り減っていく', note: 'grein+or' },
+    '_THINNING_': { words: ['sedor'], meaning: '薄れていく', note: 'sedo+or' },
+    '_STRENGTHENING_': { words: ['kanvir'], meaning: '強くなっていく', note: 'kanvi+or' },
+    '_SHINING_ON_': { words: ['fares'], meaning: '光り続ける', note: 'far+es(継続相)' },
+    '_SCATTERING_': { words: ['metor'], meaning: '散りゆく', note: 'met+or(経過相)' },
+    '_ENDLESS_': { words: ['teom'], meaning: '果てない/無限の', note: '永遠の' },
+    '_LIKE_': { words: ['yun'], meaning: 'のように', note: 'yun=比喩格詞' },
+  };
+
+  // Arka aspect suffixes for poetic conjugation
+  // Based on 新生アルカ grammar: 7 aspects
+  // -at past, -es continuous, -or progressive(becoming), -ik perfective
+  // -os experiential, -an repeated, -ok habitual/willing
+  static ARKA_ASPECT = {
+    past: 'at',         // ~した
+    continuous: 'es',   // ~している
+    progressive: 'or',  // ~しつつある / ~していく
+    perfective: 'ik',   // ~し終わった
+    experiential: 'os', // ~したことがある
+    repeated: 'an',     // 繰り返し~する
+    habitual: 'ok',     // ~する習慣がある
+  };
+
+  // Apply aspect suffix to Arka verb (handles open/closed syllable rules)
+  static applyAspect(verb, aspect) {
+    if (!verb || !aspect) return verb;
+    const suffix = ArkaEngine.ARKA_ASPECT[aspect];
+    if (!suffix) return verb;
+    // Check if verb ends in vowel (open syllable) → shorter suffix
+    const lastChar = verb.slice(-1).toLowerCase();
+    const isOpenSyllable = 'aeiou'.includes(lastChar);
+    // For open syllables: -at → -t, -es → -s, -or → -r, -ik → -k
+    if (isOpenSyllable && suffix.length === 2) {
+      return verb + suffix[suffix.length - 1];
+    }
+    return verb + suffix;
+  }
+
+  // Decompose poetic Japanese into semantic phrase tokens
+  _decomposePoeticJapanese(text) {
+    let processed = text;
+    const tokens = [];
+
+    // Phase 1: Apply FIXED compound patterns first (order matters: longest match first)
+    // These are complete expressions like 死にゆく, 果てない, 朽ちていく etc.
+    for (const pat of ArkaEngine.POETIC_COMPOUND_PATTERNS) {
+      if (!pat.replace) continue; // Skip dynamic handlers in phase 1
+      const regex = new RegExp(pat.pattern.source, pat.pattern.flags);
+      if (regex.test(processed)) {
+        processed = processed.replace(regex, ` ${pat.replace} `);
+        const tokenInfo = ArkaEngine.POETIC_TOKEN_MAP[pat.replace];
+        if (tokenInfo) {
+          tokens.push({ type: 'compound', token: pat.replace, info: tokenInfo });
+        }
+      }
+    }
+
+    // Phase 2: Apply DYNAMIC compound patterns (ながら, つつ, にゆく, ている, ていく)
+    // Use non-greedy matching and extract just the verb stem (not particles)
+    // Pattern: capture the nearest content word before ながら/つつ
+    const dynamicPatterns = [
+      { suffix: 'ながら', handler: '_WHILE_' },
+      { suffix: 'つつ', handler: '_WHILE_' },
+      { suffix: 'にゆく', handler: '_TOWARD_' },
+      { suffix: 'ている', handler: '_CONTINUOUS_' },
+      { suffix: 'ていく', handler: '_PROGRESSIVE_' },
+    ];
+    for (const dp of dynamicPatterns) {
+      const idx = processed.indexOf(dp.suffix);
+      if (idx === -1) continue;
+      // Walk backwards from the suffix to find the verb stem
+      // Stop at particles (はがのをにへでとも), spaces, or token markers
+      let verbStart = idx - 1;
+      const particles = new Set(['は', 'が', 'の', 'を', 'に', 'へ', 'で', 'と', 'も', ' ']);
+      while (verbStart >= 0 && !particles.has(processed[verbStart]) && processed[verbStart] !== ' ' && processed[verbStart] !== '_') {
+        verbStart--;
+      }
+      verbStart++;
+      const verbPart = processed.slice(verbStart, idx);
+      if (verbPart.length > 0) {
+        const fullMatch = verbPart + dp.suffix;
+        const placeholder = `__DYN_${dp.handler}${verbPart}__`;
+        processed = processed.replace(fullMatch, ` ${placeholder} `);
+        tokens.push({ type: 'compound_dynamic', token: placeholder, handler: dp.handler, verbPart });
+      }
+    }
+
+    return { processed, tokens };
+  }
+
+  // Translate a poetic line using compound decomposition + Arka grammar
+  _translatePoeticLine(text) {
+    const breakdown = [];
+
+    // Step 1: Decompose compounds
+    const { processed, tokens } = this._decomposePoeticJapanese(text);
+
+    // Step 2: Split remaining text around compound tokens and translate each part
+    const parts = processed.split(/\s+/).filter(s => s.trim());
+    const arkaParts = [];
+
+    for (const part of parts) {
+      // Check if this is a FIXED compound token
+      if (part.startsWith('_') && part.endsWith('_') && !part.startsWith('__DYN_')) {
+        const tokenInfo = ArkaEngine.POETIC_TOKEN_MAP[part];
+        if (tokenInfo) {
+          arkaParts.push(...tokenInfo.words);
+          breakdown.push({
+            original: tokenInfo.meaning,
+            root: tokenInfo.words.join(' '),
+            type: 'compound',
+            meaning: `${tokenInfo.meaning} [${tokenInfo.note}]`,
+            entry: null, suffixes: [], prefixes: []
+          });
+        }
+        continue;
+      }
+
+      // Check if this is a DYNAMIC compound token (__DYN_HANDLER_verb__)
+      if (part.startsWith('__DYN_') && part.endsWith('__')) {
+        const inner = part.slice(6, -2); // remove __DYN_ and __
+        let handler = '';
+        let verbPart = '';
+        for (const h of ['_WHILE_', '_TOWARD_', '_CONTINUOUS_', '_PROGRESSIVE_']) {
+          if (inner.startsWith(h)) {
+            handler = h;
+            verbPart = inner.slice(h.length);
+            break;
+          }
+        }
+        if (handler === '_WHILE_') {
+          const stemResult = this._resolveJpVerbStem(verbPart);
+          arkaParts.push(stemResult.arka);
+          arkaParts.push('kont');
+          breakdown.push({
+            original: verbPart + 'ながら',
+            root: stemResult.arka + ' kont',
+            type: 'compound',
+            meaning: `${verbPart}ながら [kont=同時格]`,
+            entry: null, suffixes: [], prefixes: []
+          });
+        } else if (handler === '_TOWARD_') {
+          const stemResult = this._resolveJpVerbStem(verbPart);
+          const arkaVerb = ArkaEngine.applyAspect(stemResult.arka, 'progressive');
+          arkaParts.push(arkaVerb);
+          breakdown.push({
+            original: verbPart + 'にゆく',
+            root: arkaVerb,
+            type: 'compound',
+            meaning: `${verbPart}に向かって [-or=経過相]`,
+            entry: null, suffixes: [], prefixes: []
+          });
+        } else if (handler === '_CONTINUOUS_') {
+          const stemResult = this._resolveJpVerbStem(verbPart);
+          const arkaVerb = ArkaEngine.applyAspect(stemResult.arka, 'continuous');
+          arkaParts.push(arkaVerb);
+          breakdown.push({
+            original: verbPart + 'ている',
+            root: arkaVerb,
+            type: 'compound',
+            meaning: `${verbPart}ている [-es=継続相]`,
+            entry: null, suffixes: [], prefixes: []
+          });
+        } else if (handler === '_PROGRESSIVE_') {
+          const stemResult = this._resolveJpVerbStem(verbPart);
+          const arkaVerb = ArkaEngine.applyAspect(stemResult.arka, 'progressive');
+          arkaParts.push(arkaVerb);
+          breakdown.push({
+            original: verbPart + 'ていく',
+            root: arkaVerb,
+            type: 'compound',
+            meaning: `${verbPart}ていく [-or=経過相]`,
+            entry: null, suffixes: [], prefixes: []
+          });
+        }
+        continue;
+      }
+
+      // Regular text: may contain multiple words with particles
+      // Use the standard tokenizer to split properly
+      const subTokens = this._splitPoeticFragment(part);
+      for (const word of subTokens) {
+        if (!word || !word.trim()) continue;
+        const result = this._lookupJapanese(word);
+        if (result) {
+          arkaParts.push(result.arkaWord);
+          breakdown.push({
+            original: word,
+            root: result.arkaWord,
+            type: 'word',
+            meaning: word,
+            entry: result.entry, suffixes: [], prefixes: []
+          });
+        } else if (word.trim()) {
+          arkaParts.push(`[${word}]`);
+          breakdown.push({
+            original: word,
+            root: word,
+            type: 'unknown',
+            meaning: '(該当なし)',
+            entry: null, suffixes: [], prefixes: []
+          });
+        }
+      }
+    }
+
+    return { translation: arkaParts.join(' ').trim(), breakdown };
+  }
+
+  // Split a remaining Japanese text fragment into individual content words
+  _splitPoeticFragment(text) {
+    const PARTICLES = new Set(['を', 'は', 'が', 'の', 'に', 'へ', 'で', 'と', 'も']);
+    const MULTI_PARTICLES = ['から', 'まで', 'より', 'など', 'けど'];
+    const words = [];
+    let remaining = text.trim();
+
+    while (remaining.length > 0) {
+      // Skip leading particles
+      if (PARTICLES.has(remaining[0])) {
+        remaining = remaining.slice(1);
+        continue;
+      }
+      let mpSkipped = false;
+      for (const mp of MULTI_PARTICLES) {
+        if (remaining.startsWith(mp)) {
+          remaining = remaining.slice(mp.length);
+          mpSkipped = true;
+          break;
+        }
+      }
+      if (mpSkipped) continue;
+
+      // Greedy match: try longest possible word from overrides/reverseMap
+      let found = false;
+      for (let len = Math.min(remaining.length, 12); len >= 1; len--) {
+        const candidate = remaining.slice(0, len);
+        // Strip trailing particles from candidate
+        let stripped = candidate;
+        for (const p of [...PARTICLES]) {
+          if (stripped.endsWith(p) && stripped.length > p.length) {
+            stripped = stripped.slice(0, -p.length);
+          }
+        }
+        if (stripped.length >= 1 && (ArkaEngine.JP_ARKA_OVERRIDES[stripped] || this.reverseMap.has(stripped))) {
+          words.push(stripped);
+          remaining = remaining.slice(candidate.length);
+          // Also skip any trailing particles
+          while (remaining.length > 0 && PARTICLES.has(remaining[0])) {
+            remaining = remaining.slice(1);
+          }
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        // Collect unmatched characters
+        let unmatched = remaining[0];
+        remaining = remaining.slice(1);
+        // Keep collecting until we hit a particle or can match
+        while (remaining.length > 0 && !PARTICLES.has(remaining[0])) {
+          let canMatch = false;
+          for (let len = Math.min(remaining.length, 12); len >= 2; len--) {
+            const sub = remaining.slice(0, len);
+            if (ArkaEngine.JP_ARKA_OVERRIDES[sub] || this.reverseMap.has(sub)) {
+              canMatch = true;
+              break;
+            }
+          }
+          if (canMatch) break;
+          unmatched += remaining[0];
+          remaining = remaining.slice(1);
+        }
+        if (unmatched.trim()) words.push(unmatched);
+      }
+    }
+    return words;
+  }
+
+  // Resolve a Japanese verb/adj fragment to its Arka base form
+  _resolveJpVerbStem(fragment) {
+    // Try direct override lookup
+    if (ArkaEngine.JP_ARKA_OVERRIDES[fragment]) {
+      return { arka: ArkaEngine.JP_ARKA_OVERRIDES[fragment], matched: fragment };
+    }
+    // Try adding common verb endings
+    const endings = ['る', 'い', 'う', 'く', 'す', 'つ', 'ふ', 'ぶ', 'む', 'ぬ', 'ぐ'];
+    for (const end of endings) {
+      const candidate = fragment + end;
+      if (ArkaEngine.JP_ARKA_OVERRIDES[candidate]) {
+        return { arka: ArkaEngine.JP_ARKA_OVERRIDES[candidate], matched: candidate };
+      }
+    }
+    // Try removing te-form / masu-stem endings
+    const teStripped = fragment.replace(/[ちしきぎにみびりっいええれ]$/, '');
+    if (teStripped !== fragment) {
+      for (const end of endings) {
+        const candidate = teStripped + end;
+        if (ArkaEngine.JP_ARKA_OVERRIDES[candidate]) {
+          return { arka: ArkaEngine.JP_ARKA_OVERRIDES[candidate], matched: candidate };
+        }
+      }
+    }
+    // Try reverse map
+    if (this.reverseMap.has(fragment) && this.reverseMap.get(fragment).length > 0) {
+      return { arka: this.reverseMap.get(fragment)[0].arkaWord, matched: fragment };
+    }
+    for (const end of endings) {
+      const candidate = fragment + end;
+      if (this.reverseMap.has(candidate) && this.reverseMap.get(candidate).length > 0) {
+        return { arka: this.reverseMap.get(candidate)[0].arkaWord, matched: candidate };
+      }
+    }
+    // Fallback: return fragment unchanged
+    return { arka: `[${fragment}]`, matched: null };
   }
 
   // --- Look up Arka word ---
@@ -1025,7 +1423,19 @@ class ArkaEngine {
 
   // --- Arka → Japanese Translation ---
   translateArkaToJapanese(text) {
-    if (!text.trim()) return { translation: '', breakdown: [], sentenceMatch: null, pronunciation: '' };
+    if (!text.trim()) return { translation: '', breakdown: [], sentenceMatch: null, pronunciation: '', variantWarning: null };
+
+    const variant = this.currentVariant;
+
+    // === 制アルカ mode: handle 時相詞 (hyphenated verbs) ===
+    if (variant === 'sei') {
+      return this._translateSeiArkaToJapanese(text);
+    }
+    // === 古アルカ mode: SOV word order awareness ===
+    if (variant === 'ko') {
+      return this._translateKoArkaToJapanese(text);
+    }
+    // === 新生/俗アルカ: standard processing ===
 
     // Check sentence memory for exact/near match
     // Only use sentence memory for multi-word inputs (avoid interference with single words/greetings)
@@ -1240,8 +1650,139 @@ class ArkaEngine {
       translation: fullTranslation.trim(),
       breakdown: allBreakdown,
       sentenceMatch,
-      pronunciation
+      pronunciation,
+      variantWarning: null
     };
+  }
+
+  // === 制アルカ Arka→JP ===
+  _translateSeiArkaToJapanese(text) {
+    const cleanedText = text.replace(/[""“”'']/g, ' ').trim();
+    const sentences = cleanedText.split(/([.!?。！？]+)/);
+    const allBreakdown = [];
+    let fullTranslation = '';
+
+    for (let si = 0; si < sentences.length; si++) {
+      const sentence = sentences[si];
+      if (/^[.!?。！？]+$/.test(sentence)) { fullTranslation += sentence; continue; }
+      if (!sentence.trim()) continue;
+
+      const rawTokens = sentence.trim().split(/\s+/).filter(Boolean);
+      const tokens = [];
+      for (const t of rawTokens) {
+        const commaMatch = t.match(/^(.+?)(,)$/);
+        const base = commaMatch ? commaMatch[1] : t;
+        const apoMatch = base.match(/^([a-zA-Z]+)'([a-zA-Z]+)$/);
+        if (apoMatch) { tokens.push(apoMatch[1]); tokens.push(apoMatch[2]); }
+        else { tokens.push(base); }
+        if (commaMatch) tokens.push(',');
+      }
+
+      const jpParts = [];
+      for (const token of tokens.filter(t => t !== ',')) {
+        // Try 制アルカ specific analysis first
+        const seiResult = ArkaVariants.analyzeSeiArkaToken(token, this);
+        if (seiResult.recognized) {
+          jpParts.push(seiResult.meaning);
+          allBreakdown.push({
+            original: token, root: token, type: seiResult.type,
+            meaning: seiResult.meaning, entry: null, suffixes: [], prefixes: []
+          });
+          continue;
+        }
+        // Fall back to standard analysis
+        const a = this.analyzeToken(token);
+        allBreakdown.push(a);
+        if (a.meaning && a.type !== 'unknown') { jpParts.push(a.meaning); }
+        else { jpParts.push(a.original); }
+      }
+      fullTranslation += jpParts.join(' ') + ' ';
+    }
+
+    // Check translatability
+    const arkaWords = text.split(/\s+/).filter(w => w.trim());
+    const transCheck = ArkaVariants.checkTranslatability(arkaWords, 'sei', this);
+    const variantWarning = ArkaVariants.getUntranslatableWarning(transCheck.untranslatable, 'sei');
+
+    const pronWords = text.replace(/[.!?,;:'"…。！？、]/g, '').trim().split(/\s+/).filter(Boolean);
+    const pronunciation = pronWords.map(w => {
+      const lower = w.toLowerCase().replace(/'/g, '');
+      if (/^\d+$/.test(lower)) return w;
+      return ArkaEngine.getArkaReading(lower.replace(/-/g, ''));
+    }).join(' ');
+
+    return { translation: fullTranslation.trim(), breakdown: allBreakdown, sentenceMatch: null, pronunciation, variantWarning };
+  }
+
+  // === 古アルカ Arka→JP ===
+  _translateKoArkaToJapanese(text) {
+    // 古アルカ: SOV order, and pronouns differ (na=私)
+    // Use 制アルカ-aware token analysis (shares pronouns with 古アルカ)
+    const cleanedText = text.replace(/[""“”'']/g, ' ').trim();
+    const sentences = cleanedText.split(/([.!?。！？]+)/);
+    const allBreakdown = [];
+    let fullTranslation = '';
+
+    for (let si = 0; si < sentences.length; si++) {
+      const sentence = sentences[si];
+      if (/^[.!?。！？]+$/.test(sentence)) { fullTranslation += sentence; continue; }
+      if (!sentence.trim()) continue;
+
+      const rawTokens = sentence.trim().split(/\s+/).filter(Boolean);
+      const tokens = [];
+      for (const t of rawTokens) {
+        const commaMatch = t.match(/^(.+?)(,)$/);
+        const base = commaMatch ? commaMatch[1] : t;
+        const apoMatch = base.match(/^([a-zA-Z]+)'([a-zA-Z]+)$/);
+        if (apoMatch) { tokens.push(apoMatch[1]); tokens.push(apoMatch[2]); }
+        else { tokens.push(base); }
+        if (commaMatch) tokens.push(',');
+      }
+
+      const jpParts = [];
+      for (const token of tokens.filter(t => t !== ',')) {
+        // Try 古/制アルカ specific analysis first (na=私 etc.)
+        const variantResult = ArkaVariants.analyzeSeiArkaToken(token, this);
+        if (variantResult.recognized) {
+          jpParts.push(variantResult.meaning);
+          allBreakdown.push({
+            original: token, root: token, type: variantResult.type,
+            meaning: variantResult.meaning, entry: null, suffixes: [], prefixes: []
+          });
+          continue;
+        }
+        // Fall back to standard analysis
+        const a = this.analyzeToken(token);
+        allBreakdown.push(a);
+        if (a.meaning && a.type !== 'unknown') { jpParts.push(a.meaning); }
+        else { jpParts.push(a.original); }
+      }
+      fullTranslation += jpParts.join(' ') + ' ';
+    }
+
+    // Check translatability (古アルカ has very limited known vocabulary)
+    const arkaWords = text.split(/\s+/).filter(w => w.trim());
+    const transCheck = ArkaVariants.checkTranslatability(arkaWords, 'ko', this);
+    const variantWarning = ArkaVariants.getUntranslatableWarning(transCheck.untranslatable, 'ko');
+
+    const pronWords = text.replace(/[.!?,;:'"…。！？、]/g, '').trim().split(/\s+/).filter(Boolean);
+    const pronunciation = pronWords.map(w => {
+      const lower = w.toLowerCase().replace(/'/g, '');
+      if (/^\d+$/.test(lower)) return w;
+      return ArkaEngine.getArkaReading(lower);
+    }).join(' ');
+
+    return { translation: fullTranslation.trim(), breakdown: allBreakdown, sentenceMatch: null, pronunciation, variantWarning };
+  }
+
+  // Renamed original method for reuse (delegates to standard flow)
+  translateArkaToJapaneseStandard(text) {
+    // Temporarily switch to shinsee for standard processing
+    const savedVariant = this.currentVariant;
+    this.currentVariant = 'shinsee';
+    const result = this.translateArkaToJapanese(text);
+    this.currentVariant = savedVariant;
+    return result;
   }
 
   // === HIGH-PRIORITY JP→ARKA OVERRIDES ===
@@ -1254,6 +1795,19 @@ class ArkaEngine {
     '読む': 'isk', '書く': 'axt', '言う': 'ku', '話す': 'kul',
     '聞く': 'ter', '知る': 'ser', '思う': 'lo', '考える': 'rafis',
     '分かる': 'loki', '愛する': 'tiia', '生きる': 'ikn', '死ぬ': 'vort',
+    '持つ': 'til', '落ちる': 'met', '飛ぶ': 'left', '消える': 'sedo',
+    '失う': 'tifl', '泣く': 'ena', '笑う': 'kook', '眠る': 'omol',
+    '起きる': 'teo', '待つ': 'tat', '忘れる': 'leeve', '覚える': 'kalk',
+    '探す': 'look', '祈る': 'filia', '叫ぶ': 'klam', '歌う': 'miks',
+    '踊る': 'alan', '守る': 'diin', '壊す': 'klema', '作る': 'fent',
+    '生まれる': 'felm', '育つ': 'felid', '変わる': 'xen', '終わる': 'ten',
+    '始まる': 'soa', '続く': 'van', '止まる': 'daim',
+    '燃える': 'fai', '流れる': 'lei', '揺れる': 'flan', '輝く': 'far',
+    '枯れる': 'almans', '散る': 'met', '咲く': 'mans', '朽ちる': 'grein',
+    '沈む': 'mend', '浮かぶ': 'eyut', '崩れる': 'vern',
+    '彷徨う': 'flas', 'さまよう': 'flas', '壊れる': 'klema',
+    '彩る': 'mon', '飾る': 'mon', '輝かせる': 'far',
+    '放浪する': 'flas', '漂う': 'sens', '迷う': 'reiz',
     // --- Colors ---
     '赤い': 'har', '赤': 'har', '白い': 'fir', '白': 'fir',
     '黒い': 'ver', '黒': 'ver', '青い': 'soret', '青': 'soret',
@@ -1265,10 +1819,16 @@ class ArkaEngine {
     '強い': 'kanvi', '弱い': 'ivn', '高い': 'sor', '低い': 'hait',
     '長い': 'fil', '短い': 'fen', '寒い': 'sort', '暑い': 'hart',
     '熱い': 'hart', '冷たい': 'sort',
+    '儚い': 'yunfi', '脆い': 'minat', '永遠': 'teom', '果てない': 'teom',
+    '虚しい': 'reyu', '孤独': 'laap', '深い': 'hol', '遠い': 'vosn',
+    '近い': 'amis', '暗い': 'anje', '明るい': 'firte', '静か': 'poen',
+    '激しい': 'vam', '優しい': 'noan', '残酷': 'ketet',
+    '静かに': 'seer', '穏やか': 'diina', '寂しい': 'laap',
     // --- Emotions ---
     '好き': 'siina', '嫌い': 'sin', '怖い': 'vem',
     '悲しい': 'emt', '嬉しい': 'nau', '寂しい': 'laap',
     '楽しい': 'ban', '痛い': 'yai', '眠い': 'omo',
+    '怒り': 'gaiz', '恐怖': 'vem', '絶望': 'diver', '孤独な': 'laap',
     // --- People & Family ---
     '人': 'lan', '男': 'vik', '女': 'min',
     '子供': 'lazal', '先生': 'xanxa', '友達': 'hacn',
@@ -1279,25 +1839,41 @@ class ArkaEngine {
     '空': 'jan', '山': 'wal', '海': 'tier', '川': 'erei',
     '森': 'kalto', '木': 'zom', '道': 'font',
     '花': 'miina', '猫': 'ket', '犬': 'kom',
+    '大地': 'ako', '地': 'ako', '島': 'lein',
     // --- Time ---
     '朝': 'faar', '夜': 'vird', '今日': 'fis',
     '明日': 'kest', '昨日': 'toxel', '時間': 'miv',
+    '永遠に': 'teom', '未来': 'sil', '過去': 'ses',
     // --- Things ---
     '水': 'er', '雨': 'esk', '風': 'teeze',
     '太陽': 'faal', '月': 'xelt', '星': 'liifa',
     '本': 'lei', '手紙': 'hek', '名前': 'est',
     '愛': 'tiia', '世界': 'fia',
+    '涙': 'ena', '血': 'erix', '炎': 'fai', '灰': 'dofl',
+    '影': 'axk', '鏡': 'leiz', '剣': 'xado', '盾': 'eld',
+    '鎖': 'zekl', '王': 'eeld', '鳥': 'mil', '蝶': 'axte',
     // --- Body ---
     '手': 'las', '目': 'ins', '耳': 'tem', '口': 'kuo',
-    '心': 'na', '頭': 'osn',
+    '心': 'alem', '頭': 'osn', '魂': 'seles', '翼': 'kern',
+    '傷': 'nak', '胸': 'kulf', '花びら': 'mint',
+    // --- People ---
+    '少女': 'fian', '少年': 'alfian', '一人': 'ves', '独り': 'ves',
     // --- Abstract ---
     '声': 'xiv', '歌': 'miks', '夢': 'lond',
     '光': 'far', '闇': 'vel', '命': 'livro', '死': 'vort',
+    '希望': 'ladia', '願い': 'filia', '運命': 'teel', '記憶': 'kalk',
+    '約束': 'lant', '祈り': 'filia', '奇跡': 'meltia', '真実': 'faar',
+    '嘘': 'liifa', '罪': 'ain', '赦し': 'albixe', '平和': 'fien',
+    '戦い': 'kont', '終わり': 'ten', '始まり': 'soa',
+    '中': 'ka', '内': 'ka', '果て': 'teom', '終わり': 'ten',
+    '壊れた': 'klemat', '失われた': 'tiflat', '忘れられた': 'leeveat',
   };
 
   // --- Japanese → Arka Translation ---
   translateJapaneseToArka(text) {
-    if (!text.trim()) return { translation: '', breakdown: [], isKansai: false, isSouthern: false, isPoetic: false, pronunciation: '' };
+    if (!text.trim()) return { translation: '', breakdown: [], isKansai: false, isSouthern: false, isPoetic: false, pronunciation: '', variantWarning: null };
+
+    const variant = this.currentVariant;
 
     // Detect Kansai-ben
     const isKansai = ArkaEngine.isKansaiBen(text);
@@ -1315,7 +1891,10 @@ class ArkaEngine {
     const lineResults = [];
 
     for (const line of lines) {
-      const lineResult = this._translateJpLineToArka(line, isPoetic);
+      // Use poetic engine for literary text, standard for regular text
+      const lineResult = isPoetic
+        ? this._translatePoeticLine(line)
+        : this._translateJpLineToArka(line, false);
       lineResults.push(lineResult);
       allBreakdown.push(...lineResult.breakdown);
     }
@@ -1342,7 +1921,23 @@ class ArkaEngine {
       }).join(' ');
     }
 
-    return { translation, breakdown: allBreakdown, isKansai, isSouthern: isKansai, isPoetic, pronunciation };
+    // Apply variant post-processing
+    let variantWarning = null;
+    if (variant === 'sei') {
+      const seiResult = ArkaVariants.postProcessSeiArka(translation, this);
+      translation = seiResult.text;
+      if (seiResult.untranslatable.length > 0) {
+        variantWarning = ArkaVariants.getUntranslatableWarning(seiResult.untranslatable, 'sei');
+      }
+    } else if (variant === 'ko') {
+      const koResult = ArkaVariants.postProcessKoArka(translation, this);
+      translation = koResult.text;
+      if (koResult.untranslatable.length > 0) {
+        variantWarning = ArkaVariants.getUntranslatableWarning(koResult.untranslatable, 'ko');
+      }
+    }
+
+    return { translation, breakdown: allBreakdown, isKansai, isSouthern: isKansai, isPoetic, pronunciation, variantWarning };
   }
 
   _translateJpLineToArka(text, isPoetic = false) {

@@ -4,6 +4,7 @@
   'use strict';
 
   const engine = new ArkaEngine();
+  const aiFallback = new ArkaAIFallback(engine);
   let direction = 'arka-to-jp'; // or 'jp-to-arka'
   let dictSearchTimeout = null;
 
@@ -59,6 +60,29 @@
 
   loadDictionary();
 
+  // --- AI Fallback Setup ---
+  const aiToggle = document.getElementById('ai-toggle');
+  const aiToggleWrap = document.getElementById('ai-toggle-wrap');
+
+  // Check Puter.js availability after a short delay
+  setTimeout(() => {
+    if (aiFallback.checkReady()) {
+      aiToggleWrap.classList.add('available');
+      aiToggleWrap.title = '辞書で翻訳できない部分をAIが補助します';
+    } else {
+      aiToggleWrap.classList.add('unavailable');
+      aiToggleWrap.title = 'AI補助は現在利用できません';
+      aiToggle.disabled = true;
+    }
+  }, 2000);
+
+  aiToggle.addEventListener('change', () => {
+    aiFallback.setEnabled(aiToggle.checked);
+    if (aiToggle.checked) {
+      aiFallback.checkReady();
+    }
+  });
+
   // --- Translation Direction ---
   const swapBtn = document.getElementById('swap-direction');
   const sourceLang = document.getElementById('source-lang');
@@ -68,8 +92,11 @@
 
   swapBtn.addEventListener('click', () => {
     direction = direction === 'arka-to-jp' ? 'jp-to-arka' : 'arka-to-jp';
-    sourceLang.textContent = direction === 'arka-to-jp' ? 'アルカ語' : '日本語';
-    targetLang.textContent = direction === 'arka-to-jp' ? '日本語' : 'アルカ語';
+    const variantId = engine.getVariant();
+    const variantInfo = ArkaVariants && ArkaVariants.VARIANTS[variantId];
+    const arkaLabel = variantInfo ? variantInfo.label : 'アルカ語';
+    sourceLang.textContent = direction === 'arka-to-jp' ? arkaLabel : '日本語';
+    targetLang.textContent = direction === 'arka-to-jp' ? '日本語' : arkaLabel;
     inputText.placeholder = direction === 'arka-to-jp'
       ? 'アルカ語のテキストを入力…'
       : '日本語のテキストを入力…';
@@ -79,6 +106,31 @@
     // Swap animation
     swapBtn.style.transform = 'rotate(180deg)';
     setTimeout(() => { swapBtn.style.transform = ''; }, 300);
+  });
+
+  // --- Variant Selector ---
+  const variantPills = document.querySelectorAll('.variant-pill');
+  const variantWarningEl = document.getElementById('variant-warning');
+
+  variantPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      const variantId = pill.dataset.variant;
+      variantPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      engine.setVariant(variantId);
+
+      // Update source label to reflect variant
+      const variantInfo = ArkaVariants.VARIANTS[variantId];
+      if (direction === 'arka-to-jp') {
+        sourceLang.textContent = variantInfo ? variantInfo.label : 'アルカ語';
+      } else {
+        targetLang.textContent = variantInfo ? variantInfo.label : 'アルカ語';
+      }
+
+      // Clear warning
+      variantWarningEl.style.display = 'none';
+      variantWarningEl.innerHTML = '';
+    });
   });
 
   // --- Translate ---
@@ -105,6 +157,147 @@
     } else {
       result = engine.translateJapaneseToArka(text);
     }
+
+    // Render the rule-based result immediately
+    renderTranslation(result, text);
+
+    // If AI fallback is enabled and result looks incomplete, query AI asynchronously
+    if (aiFallback.enabled && aiFallback.ready && aiFallback.needsFallback(result, text)) {
+      showAILoading();
+      const dir = direction === 'arka-to-jp' ? 'arka-to-jp' : 'jp-to-arka';
+      aiFallback.translateWithAI(text, dir).then(aiResult => {
+        if (aiResult) {
+          appendAIResult(aiResult, dir);
+        } else {
+          appendAIRejected();
+        }
+      }).catch((err) => {
+        console.warn('AI fallback failed:', err);
+        appendAIError();
+      });
+    }
+  }
+
+  function showAILoading() {
+    // Add loading indicator below output
+    let aiSection = document.getElementById('ai-result-section');
+    if (!aiSection) {
+      aiSection = document.createElement('div');
+      aiSection.id = 'ai-result-section';
+      aiSection.className = 'ai-result-section';
+      outputText.parentNode.appendChild(aiSection);
+    }
+    aiSection.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span> AI翻訳を取得中…</div>';
+    aiSection.style.display = 'block';
+  }
+
+  function hideAILoading() {
+    const aiSection = document.getElementById('ai-result-section');
+    if (aiSection) aiSection.style.display = 'none';
+  }
+
+  function getOrCreateAISection() {
+    let aiSection = document.getElementById('ai-result-section');
+    if (!aiSection) {
+      aiSection = document.createElement('div');
+      aiSection.id = 'ai-result-section';
+      aiSection.className = 'ai-result-section';
+      outputText.parentNode.appendChild(aiSection);
+    }
+    return aiSection;
+  }
+
+  function appendAIError() {
+    const aiSection = getOrCreateAISection();
+    aiSection.innerHTML = `
+      <div class="ai-result-header">
+        <span class="ai-badge ai-badge-warn">🤖 AI補助</span>
+        <span class="ai-note">AI翻訳に接続できませんでした。初回利用時はPuter.jsのログインが必要です。</span>
+      </div>
+    `;
+    aiSection.style.display = 'block';
+    setTimeout(() => { aiSection.style.display = 'none'; }, 6000);
+  }
+
+  function appendAIRejected() {
+    const aiSection = getOrCreateAISection();
+    aiSection.innerHTML = `
+      <div class="ai-result-header">
+        <span class="ai-badge ai-badge-warn">🤖 AI補助</span>
+        <span class="ai-note">AIの応答が検証を通過できませんでした（不要な言語または形式が混入）</span>
+      </div>
+    `;
+    aiSection.style.display = 'block';
+    setTimeout(() => { aiSection.style.display = 'none'; }, 6000);
+  }
+
+  function appendAIResult(aiText, dir) {
+    const aiSection = getOrCreateAISection();
+
+    // Double-check: run one more client-side validation
+    const validated = validateAIDisplay(aiText, dir);
+    if (!validated) {
+      appendAIRejected();
+      return;
+    }
+
+    aiSection.innerHTML = `
+      <div class="ai-result-header">
+        <span class="ai-badge">🤖 AI補助翻訳</span>
+        <span class="ai-note">辞書にない語をAIが補完（検証済み）</span>
+      </div>
+      <div class="ai-result-text">${escapeHtml(validated)}</div>
+    `;
+    aiSection.style.display = 'block';
+  }
+
+  /**
+   * Client-side final validation of AI output before display.
+   * Returns cleaned text or null if rejected.
+   */
+  function validateAIDisplay(text, dir) {
+    if (!text || text.length < 2) return null;
+
+    // Strip any remaining forbidden script characters (extra safety)
+    let cleaned = text;
+    // Cyrillic, Arabic, Korean, Thai, Devanagari, etc.
+    cleaned = cleaned.replace(/[\u0400-\u04FF\u0600-\u06FF\u0E00-\u0E7F\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F\u0900-\u097F\u0590-\u05FF]/g, '');
+
+    // Strip markdown residue
+    cleaned = cleaned.replace(/```[\s\S]*?```/g, '');
+    cleaned = cleaned.replace(/\*\*/g, '');
+    cleaned = cleaned.replace(/^#+\s+/gm, '');
+
+    // Strip English sentences one more time
+    const sentences = cleaned.split(/(?<=[.!?。！？])\s+/);
+    const filtered = sentences.filter(s => {
+      const lower = s.toLowerCase();
+      const engWords = ['the ', ' is ', ' are ', ' this ', ' that ', ' have ', ' with ', ' from ',
+        ' means ', ' translation ', ' note ', ' please ', ' which ', ' would '];
+      let hits = 0;
+      for (const w of engWords) { if (lower.includes(w)) hits++; }
+      return hits < 2;
+    });
+    cleaned = filtered.join(' ').trim();
+
+    // Direction-specific final checks
+    if (dir === 'jp-to-arka') {
+      const latin = (cleaned.match(/[a-zA-Z]/g) || []).length;
+      const total = cleaned.replace(/\s/g, '').length;
+      if (total === 0 || latin / total < 0.3) return null;
+    } else {
+      const jp = (cleaned.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/g) || []).length;
+      if (jp === 0) return null;
+    }
+
+    cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+    return cleaned.length >= 2 ? cleaned : null;
+  }
+
+  function renderTranslation(result, text) {
+    // Hide any previous AI result
+    const aiSection = document.getElementById('ai-result-section');
+    if (aiSection) aiSection.style.display = 'none';
 
     // Show sentence-level match if available (Arka→JP only)
     let sentenceMatchHtml = '';
@@ -151,6 +344,15 @@
     // Also show pronunciation for Arka→JP
     if (direction === 'arka-to-jp' && result.pronunciation) {
       outputText.innerHTML += `<div class="pronunciation-guide"><span class="pron-label">🔊 原文読み:</span> ${escapeHtml(result.pronunciation)}</div>`;
+    }
+
+    // Show variant warning if applicable
+    if (result.variantWarning) {
+      variantWarningEl.style.display = 'block';
+      variantWarningEl.innerHTML = `<div class="warning-title">${escapeHtml(result.variantWarning.message)}</div><div class="warning-details">${escapeHtml(result.variantWarning.details)}</div>`;
+    } else {
+      variantWarningEl.style.display = 'none';
+      variantWarningEl.innerHTML = '';
     }
 
     // Show breakdown

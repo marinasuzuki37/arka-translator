@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
   <!-- Loading overlay -->
@@ -65,6 +66,17 @@
   <main class="main-content">
     <!-- TRANSLATE TAB -->
     <section id="tab-translate" class="tab-panel active">
+      <!-- Variant Selector -->
+      <div class="variant-bar" id="variant-bar">
+        <label class="variant-label">翻訳モード:</label>
+        <div class="variant-pills" id="variant-pills">
+          <button class="variant-pill active" data-variant="shinsee" title="2008～2013: 現行の標準アルカ">新生アルカ</button>
+          <button class="variant-pill" data-variant="zoku" title="2013～: 新生+拡張語彙">俗アルカ</button>
+          <button class="variant-pill" data-variant="sei" title="2001～2008: n対語・時相詞">制アルカ</button>
+          <button class="variant-pill" data-variant="ko" title="1991～2001: SOV語順・表意幻字">古アルカ</button>
+        </div>
+      </div>
+
       <div class="direction-bar">
         <span class="lang-label" id="source-lang">アルカ語</span>
         <button class="swap-btn" id="swap-direction" aria-label="翻訳方向を切り替え">
@@ -72,6 +84,9 @@
         </button>
         <span class="lang-label" id="target-lang">日本語</span>
       </div>
+
+      <!-- Variant Warning -->
+      <div class="variant-warning" id="variant-warning" style="display:none;"></div>
 
       <div class="translate-panels">
         <div class="panel input-panel">
@@ -83,7 +98,13 @@
           </div>
           <textarea id="input-text" placeholder="ここにテキストを入力…" rows="6" spellcheck="false"></textarea>
           <div class="panel-footer">
-            <button class="translate-btn" id="translate-btn">翻訳する</button>
+            <div class="translate-actions">
+              <button class="translate-btn" id="translate-btn">翻訳する</button>
+              <label class="ai-toggle" id="ai-toggle-wrap" title="辞書で翻訳できない部分をAIが補助します">
+                <input type="checkbox" id="ai-toggle">
+                <span class="ai-toggle-label">🤖 AI補助</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -149,7 +170,9 @@
     <p>幻訳 — 人工言語アルカの自動翻訳システム</p>
   </footer>
 
+  <script src="variants.js"></script>
   <script src="engine.js"></script>
+  <script src="ai-fallback.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
