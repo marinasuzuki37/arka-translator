@@ -452,14 +452,59 @@ class ArkaEngine {
   };
 
   static REVERSE_GREETINGS = {
-    'こんにちは': 'ansoonoyun', 'おはよう': 'soonoyun', 'こんばんは': 'ansoonoyun',
-    'おはようございます': 'ansoonoyun', 'やあ': 'soonoyun', 'どうも': 'sentant',
-    'ありがとう': 'sentant', 'ありがとうございます': 'ansentant',
+    // --- 時間帯挨拶（アルカは時間帯を区別しない：全てsoonoyun系） ---
+    'おはようございます': 'ansoonoyun',  // 丁寧
+    'こんにちは': 'soonoyun',            // カジュアル
+    'こんばんは': 'soonoyun',            // カジュアル（アルカは朝昼晩を区別しない）
+    'おはよう': 'soonoyun',              // カジュアル
+    'やあ': 'soonoyun',
+    // --- おやすみ ---
+    'おやすみなさい': 'anxidia',          // 丁寧
+    'おやすみ': 'xidia',                 // カジュアル
+    // --- 感謝 ---
     'どうもありがとうございます': 'misent',
-    'すみません': 'anvantant', 'ごめんなさい': 'vantant', 'ごめん': 'vantant',
-    '申し訳ございません': 'anvantant', '申し訳ありません': 'anvantant',
-    '大丈夫': 'passo', 'いいよ': 'passo', 'ようこそ': 'kekko',
-    'いらっしゃいませ': 'mikekko', 'お待たせしました': 'misolvat'
+    'ありがとうございます': 'ansentant',
+    'ありがとう': 'sentant',
+    'どうも': 'sentant',
+    // --- 謝罪 ---
+    '申し訳ございません': 'mianteo',
+    '申し訳ありません': 'anvantant',
+    'ごめんなさい': 'vantant',
+    'すみません': 'xante',
+    'ごめん': 'vant',
+    // --- 別れ ---
+    'さようなら': 'doova',
+    'さよなら': 'doova',
+    'じゃあね': 'doo',
+    'バイバイ': 'doo',
+    // --- 初対面・紹介 ---
+    'はじめまして': 'dacma',
+    'よろしくお願いします': 'anrets',
+    'よろしくお願いいたします': 'anrets',
+    'よろしく': 'estol',
+    // --- 久しぶり ---
+    'お久しぶりです': 'anfiima',
+    'お久しぶり': 'anfiima',
+    '久しぶり': 'fiima',
+    // --- その他 ---
+    '大丈夫': 'passo', 'いいよ': 'passo',
+    'ようこそ': 'kekko',
+    'いらっしゃいませ': 'mikekko',
+    'お待たせしました': 'misolvat',
+    'おめでとうございます': 'antísoa',
+    'おめでとう': 'tisoa',
+    'お疲れ様です': 'anfatoo',
+    'お疲れ様': 'anfatoo',
+    'お疲れさま': 'anfatoo',
+    'いただきます': 'ansentant',
+    'ごちそうさまでした': 'ansentant',
+    'お元気ですか': 'ansoonoyun',
+    'もしもし': 'tixante',
+    'いってきます': 'leevan',
+    'いってらっしゃい': 'leevan',
+    'ただいま': 'lunan',
+    'おかえり': 'lunan',
+    'おかえりなさい': 'milunan',
   };
 
   static SPECIAL_NEGATION = {
@@ -2113,9 +2158,292 @@ class ArkaEngine {
 
   // --- Shared helpers for JP→Arka pipeline ---
 
+  // ===== JAPANESE NAME + HONORIFIC HANDLING =====
+
+  /**
+   * Japanese kana → Arka romanization table
+   * Arka uses Latin letters with specific phonology rules
+   */
+  static KANA_TO_ARKA = {
+    // Hiragana
+    'あ':'a','い':'i','う':'u','え':'e','お':'o',
+    'か':'ka','き':'ki','く':'ku','け':'ke','こ':'ko',
+    'さ':'sa','し':'si','す':'su','せ':'se','そ':'so',
+    'た':'ta','ち':'ti','つ':'tu','て':'te','と':'to',
+    'な':'na','に':'ni','ぬ':'nu','ね':'ne','の':'no',
+    'は':'ha','ひ':'hi','ふ':'hu','へ':'he','ほ':'ho',
+    'ま':'ma','み':'mi','む':'mu','め':'me','も':'mo',
+    'ら':'ra','り':'ri','る':'ru','れ':'re','ろ':'ro',
+    'わ':'wa','ゐ':'wi','ゑ':'we','を':'o',
+    'や':'ya','ゆ':'yu','よ':'yo',
+    'ん':'n',
+    'が':'ga','ぎ':'gi','ぐ':'gu','げ':'ge','ご':'go',
+    'ざ':'za','じ':'ji','ず':'zu','ぜ':'ze','ぞ':'zo',
+    'だ':'da','ぢ':'di','づ':'du','で':'de','ど':'do',
+    'ば':'ba','び':'bi','ぶ':'bu','べ':'be','ぼ':'bo',
+    'ぱ':'pa','ぴ':'pi','ぷ':'pu','ぺ':'pe','ぽ':'po',
+    'きゃ':'kya','きゅ':'kyu','きょ':'kyo',
+    'しゃ':'xa','しゅ':'xu','しょ':'xo',  // sh→x in Arka
+    'ちゃ':'txa','ちゅ':'txu','ちょ':'txo', // ch→tx in Arka
+    'にゃ':'nya','にゅ':'nyu','にょ':'nyo',
+    'ひゃ':'hya','ひゅ':'hyu','ひょ':'hyo',
+    'みゃ':'mya','みゅ':'myu','みょ':'myo',
+    'りゃ':'rya','りゅ':'ryu','りょ':'ryo',
+    'ぎゃ':'gya','ぎゅ':'gyu','ぎょ':'gyo',
+    'じゃ':'ja','じゅ':'ju','じょ':'jo',
+    'びゃ':'bya','びゅ':'byu','びょ':'byo',
+    'ぴゃ':'pya','ぴゅ':'pyu','ぴょ':'pyo',
+    'っ':'_GEMINATE_', // doubled consonant marker
+    'ー':'_LONG_',     // long vowel
+    // Katakana (same mappings)
+    'ア':'a','イ':'i','ウ':'u','エ':'e','オ':'o',
+    'カ':'ka','キ':'ki','ク':'ku','ケ':'ke','コ':'ko',
+    'サ':'sa','シ':'si','ス':'su','セ':'se','ソ':'so',
+    'タ':'ta','チ':'ti','ツ':'tu','テ':'te','ト':'to',
+    'ナ':'na','ニ':'ni','ヌ':'nu','ネ':'ne','ノ':'no',
+    'ハ':'ha','ヒ':'hi','フ':'hu','ヘ':'he','ホ':'ho',
+    'マ':'ma','ミ':'mi','ム':'mu','メ':'me','モ':'mo',
+    'ラ':'ra','リ':'ri','ル':'ru','レ':'re','ロ':'ro',
+    'ワ':'wa','ヲ':'o',
+    'ヤ':'ya','ユ':'yu','ヨ':'yo',
+    'ン':'n',
+    'ガ':'ga','ギ':'gi','グ':'gu','ゲ':'ge','ゴ':'go',
+    'ザ':'za','ジ':'ji','ズ':'zu','ゼ':'ze','ゾ':'zo',
+    'ダ':'da','ヂ':'di','ヅ':'du','デ':'de','ド':'do',
+    'バ':'ba','ビ':'bi','ブ':'bu','ベ':'be','ボ':'bo',
+    'パ':'pa','ピ':'pi','プ':'pu','ペ':'pe','ポ':'po',
+    'キャ':'kya','キュ':'kyu','キョ':'kyo',
+    'シャ':'xa','シュ':'xu','ショ':'xo',
+    'チャ':'txa','チュ':'txu','チョ':'txo',
+    'ニャ':'nya','ニュ':'nyu','ニョ':'nyo',
+    'ヒャ':'hya','ヒュ':'hyu','ヒョ':'hyo',
+    'ミャ':'mya','ミュ':'myu','ミョ':'myo',
+    'リャ':'rya','リュ':'ryu','リョ':'ryo',
+    'ギャ':'gya','ギュ':'gyu','ギョ':'gyo',
+    'ジャ':'ja','ジュ':'ju','ジョ':'jo',
+    'ビャ':'bya','ビュ':'byu','ビョ':'byo',
+    'ピャ':'pya','ピュ':'pyu','ピョ':'pyo',
+    'ッ':'_GEMINATE_','ー':'_LONG_',
+    // Extended katakana
+    'ファ':'fa','フィ':'fi','フェ':'fe','フォ':'fo',
+    'ティ':'ti','ディ':'di','デュ':'du',
+    'ヴァ':'va','ヴィ':'vi','ヴ':'vu','ヴェ':'ve','ヴォ':'vo',
+  };
+
+  /**
+   * Convert Japanese name (kana) to Arka-compatible romanization
+   */
+  static transliterateNameToArka(name) {
+    let result = '';
+    let i = 0;
+    const str = name;
+    while (i < str.length) {
+      // Try 2-char sequences first (拗音 etc.)
+      if (i + 1 < str.length) {
+        const two = str.slice(i, i + 2);
+        if (ArkaEngine.KANA_TO_ARKA[two]) {
+          result += ArkaEngine.KANA_TO_ARKA[two];
+          i += 2;
+          continue;
+        }
+      }
+      // Try 1-char
+      const one = str[i];
+      if (ArkaEngine.KANA_TO_ARKA[one]) {
+        const mapped = ArkaEngine.KANA_TO_ARKA[one];
+        if (mapped === '_GEMINATE_') {
+          // Double the next consonant
+          if (i + 1 < str.length) {
+            const nextChar = str[i + 1];
+            const twoAfter = (i + 2 < str.length) ? str.slice(i + 1, i + 3) : null;
+            const nextRoman = (twoAfter && ArkaEngine.KANA_TO_ARKA[twoAfter])
+              ? ArkaEngine.KANA_TO_ARKA[twoAfter]
+              : ArkaEngine.KANA_TO_ARKA[nextChar];
+            if (nextRoman && nextRoman.length > 0 && nextRoman !== '_GEMINATE_' && nextRoman !== '_LONG_') {
+              result += nextRoman[0]; // double the first consonant
+            }
+          }
+        } else if (mapped === '_LONG_') {
+          // Extend previous vowel
+          if (result.length > 0) {
+            const lastChar = result[result.length - 1];
+            if ('aiueo'.includes(lastChar)) {
+              result += lastChar;
+            }
+          }
+        } else {
+          result += mapped;
+        }
+      } else if (/[a-zA-Z]/.test(one)) {
+        // Already romanized
+        result += one.toLowerCase();
+      } else if (/[\u4e00-\u9fff]/.test(one)) {
+        // Kanji — cannot reliably transliterate without reading info
+        // Keep as-is; will be handled by the name detection logic
+        result += one;
+      }
+      i++;
+    }
+    return result;
+  }
+
+  /**
+   * Common Japanese name kanji → reading map (covers frequent names)
+   * Returns hiragana reading or null if unknown
+   */
+  static COMMON_NAME_READINGS = {
+    // Given names (female)
+    '英恵': 'はなえ', '美咲': 'みさき', '優子': 'ゆうこ', '花子': 'はなこ',
+    '真理奈': 'まりな', '満理奈': 'まりな', '愛': 'あい', '桜': 'さくら',
+    '陽子': 'ようこ', '恵子': 'けいこ', '明美': 'あけみ', '直美': 'なおみ',
+    '裕子': 'ゆうこ', '智子': 'ともこ', '美穂': 'みほ', '早苗': 'さなえ',
+    '千尋': 'ちひろ', '遥': 'はるか', '結衣': 'ゆい', '葵': 'あおい',
+    '凛': 'りん', '紬': 'つむぎ', '陽菜': 'ひな', '芽依': 'めい',
+    // Given names (male)
+    '太郎': 'たろう', '一郎': 'いちろう', '健一': 'けんいち', '大輔': 'だいすけ',
+    '翔': 'しょう', '蓮': 'れん', '悠真': 'ゆうま', '大和': 'やまと',
+    '翔太': 'しょうた', '拓也': 'たくや', '雄一': 'ゆういち', '誠': 'まこと',
+    '隆': 'たかし', '浩': 'ひろし', '修': 'おさむ', '剛': 'つよし',
+    // Family names
+    '鈴木': 'すずき', '田中': 'たなか', '佐藤': 'さとう', '山田': 'やまだ',
+    '高橋': 'たかはし', '渡辺': 'わたなべ', '伊藤': 'いとう', '中村': 'なかむら',
+    '小林': 'こばやし', '加藤': 'かとう', '吉田': 'よしだ', '山口': 'やまぐち',
+    '松本': 'まつもと', '井上': 'いのうえ', '木村': 'きむら', '林': 'はやし',
+    '清水': 'しみず', '斎藤': 'さいとう', '山本': 'やまもと', '森': 'もり',
+    '池田': 'いけだ', '橋本': 'はしもと', '阿部': 'あべ', '石川': 'いしかわ',
+    '藤田': 'ふじた', '前田': 'まえだ', '後藤': 'ごとう', '岡田': 'おかだ',
+    '長谷川': 'はせがわ', '村上': 'むらかみ', '近藤': 'こんどう',
+    '石井': 'いしい', '藤井': 'ふじい', '上田': 'うえだ', '太田': 'おおた',
+    '遠藤': 'えんどう', '原田': 'はらだ', '青木': 'あおき', '小川': 'おがわ',
+    '坂本': 'さかもと', '福田': 'ふくだ', '西村': 'にしむら', '三浦': 'みうら',
+    '菅原': 'すがわら', '武田': 'たけだ', '中島': 'なかじま', '野村': 'のむら',
+  };
+
+  /**
+   * Japanese honorific → Arka register mapping
+   * Arka doesn't have direct honorific suffixes; instead the register (位相) changes
+   */
+  static JP_HONORIFIC_TO_ARKA = {
+    'さん': { prefix: '', register: 'seet' },    // 中立位相 → no prefix, neutral
+    '様': { prefix: '', register: 'rente' },      // 丁寧位相 → rente (formal)
+    'ちゃん': { prefix: '', register: 'milia' },   // 親愛 → milia
+    'くん': { prefix: '', register: 'yuul' },      // 男性友人 → yuul
+    '先生': { prefix: '', register: 'seet' },      // 敬称 → treated as name+role
+    '殿': { prefix: '', register: 'rente' },       // 公式 → formal
+  };
+
+  /**
+   * Detect and extract "name + honorific" patterns from Japanese text.
+   * CRITICAL: Distinguishes 「鈴木様」(name+honorific) from 「その様です」(noun+copula).
+   *
+   * Returns modified text with __NAME_xxx__ placeholders.
+   */
+  static _extractNamesWithHonorifics(text) {
+    const nameTokens = [];
+    let processed = text;
+
+    // Honorifics to detect (ordered longest first)
+    const honorifics = ['先生', '様', 'さん', 'ちゃん', 'くん', '殿'];
+
+    // Patterns where 様 is NOT an honorific (sentence patterns)
+    // 「その様」「この様」「同様」「様です」「様に」「様な」 etc.
+    const SAMA_NON_HONORIFIC_PREFIXES = [
+      'その', 'この', 'あの', 'どの',  // 指示詞+様 = "such a manner"
+      '同', '異', '多', '各',           // 同様、異様、多様、各様
+    ];
+    const SAMA_NON_HONORIFIC_PATTERNS = [
+      /様[でにがをはもの]/,  // 様+助詞 without preceding name (part of noun phrase)
+    ];
+
+    for (const hon of honorifics) {
+      const regex = new RegExp(`([\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}a-zA-Zａ-ｚＡ-Ｚ]{1,10})${hon}`, 'gu');
+      let match;
+      while ((match = regex.exec(processed)) !== null) {
+        const namePart = match[1];
+        const fullMatch = match[0];
+        const matchStart = match.index;
+
+        // --- 「様」特殊処理: 名前の敬称かどうかを判定 ---
+        if (hon === '様') {
+          // Check if preceded by non-name patterns
+          let isNonHonorific = false;
+          for (const prefix of SAMA_NON_HONORIFIC_PREFIXES) {
+            if (namePart === prefix || namePart.endsWith(prefix)) {
+              isNonHonorific = true;
+              break;
+            }
+          }
+          if (isNonHonorific) continue;
+
+          // 「様です」「様に」「様な」when preceded by の/な/する → not honorific
+          // e.g., 「その様です」「この様に」
+          const textBefore = processed.slice(Math.max(0, matchStart - 5), matchStart);
+          if (/[のなるた]$/.test(textBefore) && /^[\u4e00-\u9fff]様/.test(fullMatch) === false) {
+            continue;
+          }
+
+          // Single-kanji "name" that's likely not a name
+          if (namePart.length === 1 && /[同異多各何如一二三四五六七八九十百千万]/.test(namePart)) {
+            continue;
+          }
+
+          // 「模様」「様子」「様式」— 様 as part of compound word
+          const afterIdx = matchStart + fullMatch.length;
+          if (afterIdx < processed.length) {
+            const charAfter = processed[afterIdx];
+            if (/[子式相態]/.test(charAfter)) continue;
+          }
+        }
+
+        // --- Name transliteration ---
+        let arkaName = '';
+
+        // Try common name readings first
+        if (ArkaEngine.COMMON_NAME_READINGS[namePart]) {
+          const reading = ArkaEngine.COMMON_NAME_READINGS[namePart];
+          arkaName = ArkaEngine.transliterateNameToArka(reading);
+        } else if (/^[\p{Script=Hiragana}]+$/u.test(namePart)) {
+          // Pure hiragana name
+          arkaName = ArkaEngine.transliterateNameToArka(namePart);
+        } else if (/^[\p{Script=Katakana}ー]+$/u.test(namePart)) {
+          // Pure katakana name
+          arkaName = ArkaEngine.transliterateNameToArka(namePart);
+        } else if (/^[a-zA-Zａ-ｚＡ-Ｚ]+$/.test(namePart)) {
+          // Roman letters
+          arkaName = namePart.toLowerCase()
+            .replace(/[ａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+        } else {
+          // Kanji name not in our table — keep original kanji for display,
+          // but wrap in a transliteration marker
+          arkaName = namePart;
+        }
+
+        const token = `__NAME_${nameTokens.length}__`;
+        nameTokens.push({
+          original: fullMatch,
+          name: namePart,
+          honorific: hon,
+          arkaName: arkaName,
+          register: ArkaEngine.JP_HONORIFIC_TO_ARKA[hon]?.register || 'seet',
+        });
+        processed = processed.slice(0, matchStart) + ` ${token} ` + processed.slice(matchStart + fullMatch.length);
+        // Reset regex index since we modified the string
+        regex.lastIndex = matchStart + token.length + 2;
+      }
+    }
+    return { text: processed, nameTokens };
+  }
+
   /** Replace greeting/pronoun phrases with placeholder tokens */
   _replaceGreetingsAndPronouns(text) {
     let processed = text;
+
+    // Step 0: Extract names+honorifics FIRST (before greetings eat them)
+    const nameResult = ArkaEngine._extractNamesWithHonorifics(processed);
+    processed = nameResult.text;
+    this._lastNameTokens = nameResult.nameTokens;
+
+    // Step 1: Replace greeting phrases
     const greetingEntries = Object.entries(ArkaEngine.REVERSE_GREETINGS)
       .sort((a, b) => b[0].length - a[0].length);
     for (const [jp, arka] of greetingEntries) {
@@ -2123,6 +2451,8 @@ class ArkaEngine {
         processed = processed.replace(jp, ` __GREETING_${arka}__ `);
       }
     }
+
+    // Step 2: Replace pronouns
     for (const [jp, arka] of Object.entries(ArkaEngine.REVERSE_PRONOUNS)) {
       if (processed.includes(jp)) {
         processed = processed.replace(new RegExp(this._escapeRegex(jp), 'g'), ` __PRONOUN_${arka}__ `);
@@ -2135,17 +2465,35 @@ class ArkaEngine {
   _resolveSegmentsToArka(segments) {
     const arkaParts = [];
     const breakdown = [];
+    const nameTokens = this._lastNameTokens || [];
     for (const seg of segments) {
       if (seg.startsWith('__GREETING_')) {
         const word = seg.replace('__GREETING_', '').replace('__', '');
         arkaParts.push(word);
-        breakdown.push({ original: word, root: word, type: 'greeting', meaning: ArkaEngine.GREETINGS[word] || word, entry: null, suffixes: [], prefixes: [] });
+        breakdown.push({ original: word, root: word, type: 'greeting', meaning: ArkaEngine.GREETINGS[word] || this.greetingsMap?.get(word) || word, entry: null, suffixes: [], prefixes: [] });
         continue;
       }
       if (seg.startsWith('__PRONOUN_')) {
         const word = seg.replace('__PRONOUN_', '').replace('__', '');
         arkaParts.push(word);
         breakdown.push({ original: word, root: word, type: 'pronoun', meaning: ArkaEngine.PRONOUNS[word] || word, entry: null, suffixes: [], prefixes: [] });
+        continue;
+      }
+      if (seg.startsWith('__NAME_')) {
+        const idx = parseInt(seg.replace('__NAME_', '').replace('__', ''));
+        const nameInfo = nameTokens[idx];
+        if (nameInfo) {
+          const arkaName = nameInfo.arkaName;
+          arkaParts.push(arkaName);
+          const honLabel = nameInfo.honorific;
+          breakdown.push({
+            original: nameInfo.original,
+            root: arkaName,
+            type: 'name',
+            meaning: `${nameInfo.name}${honLabel} → ${arkaName}`,
+            entry: null, suffixes: [], prefixes: []
+          });
+        }
         continue;
       }
       const result = this._lookupJapanese(seg);
@@ -2317,7 +2665,7 @@ class ArkaEngine {
   _tokenizeJapanese(text) {
     const tokens = [];
     let current = '';
-    const parts = text.split(/(__(?:GREETING|PRONOUN)_[a-z]+__)/);
+    const parts = text.split(/(__(?:GREETING|PRONOUN|NAME)_[a-z0-9]+__)/);
     for (const part of parts) {
       if (part.startsWith('__')) {
         if (current.trim()) {
