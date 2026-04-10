@@ -959,8 +959,11 @@ class ArkaEngine {
     }
     // Very short, no punctuation, AND contains literary kanji = likely poetic fragment
     // (Don't trigger on normal short sentences like greetings or simple statements)
-    const literaryKanji = /[儚脆散朽枯滅彷徊魂翼闇光涙夢運命絶望希望永遠寒空]/;
-    if (text.length < ArkaEngine.POETIC_KANJI_THRESHOLD && !/[。、！？!?,.]/.test(text) && literaryKanji.test(text)) return true;
+    // Count distinct literary WORDS (not individual kanji) to avoid false positives.
+    // 希望, 運命, 絶望, 永遠 each count as 1 word, not 2 kanji.
+    const literaryWords = ['希望', '絶望', '運命', '永遠', '儚', '脆', '朽', '枯', '滅', '彷徊', '魂', '翼', '闇', '涙', '夢'];
+    const literaryCount = literaryWords.filter(w => text.includes(w)).length;
+    if (text.length < ArkaEngine.POETIC_KANJI_THRESHOLD && !/[。、！？!?,.]/.test(text) && literaryCount >= 2) return true;
     // Detect literary/poetic compound expressions (require STRONG signals)
     // Weak signals like ている/ていく alone are not enough — they appear in regular text
     const strongPoeticPatterns = /(にゆく|りゆく|えゆく|みゆく|ながら|つつ|のまま|のように|果てない|尽きない|終わりなき|儚い|脆く|散りゆく|朽ちていく|消えていく|枯れていく|崩れていく)/;
@@ -2746,8 +2749,8 @@ class ArkaEngine {
     '近い': 'amis',
     '強い': 'teel',
     '弱い': 'kuun',
-    '長い': 'nolk',
-    '短い': 'fol',
+    '長い': 'fil',
+    '短い': 'fen',
     '広い': 'kleet',
     '狭い': 'limi',
     '明るい': 'far',
@@ -3223,6 +3226,24 @@ class ArkaEngine {
     '泳ぎたい': 'lax loks',       // want to swim
     '飛びたい': 'lax left',       // want to fly
     'たい': '',                   // desire suffix alone → drop
+    // 〜たかった (wanted to ~, past desire) → milx = 法副詞「～したかった」
+    '生きたかった': 'milx ikn',       // wanted to live
+    '死にたかった': 'milx vort',      // wanted to die
+    '行きたかった': 'milx ke',        // wanted to go
+    '食べたかった': 'milx kui',       // wanted to eat
+    '会いたかった': 'milx akt',       // wanted to meet
+    '帰りたかった': 'milx kolt',      // wanted to go home
+    '見たかった': 'milx in',          // wanted to see
+    '知りたかった': 'milx ser',       // wanted to know
+    '話したかった': 'milx kul',       // wanted to talk
+    '聞きたかった': 'milx ter',       // wanted to hear
+    '読みたかった': 'milx isk',       // wanted to read
+    '書きたかった': 'milx axt',       // wanted to write
+    '歩きたかった': 'milx luk',       // wanted to walk
+    '走りたかった': 'milx lef',       // wanted to run
+    '眠りたかった': 'milx mok',       // wanted to sleep
+    '飛びたかった': 'milx left',      // wanted to fly
+    'たかった': '',              // past desire suffix alone → drop
     // 〜なきゃいけない / 〜なければならない (must ~) → fal = 法副詞「～すべき」
     '生きなきゃいけない': 'fal ikn',  // must live
     '生きなきゃ': 'fal ikn',         // must live (contracted)
@@ -3258,6 +3279,28 @@ class ArkaEngine {
     '死ぬ': 'vort',             // die
     '死んだ': 'vort',           // died
     '死んで': 'vort',           // dying (te-form)
+
+    // === Round 5: Missing vocabulary ===
+    '望み': 'lax',               // hope/wish
+    '望む': 'lax',               // to wish/hope
+    '望んで': 'lax',            // hoping (te-form)
+    '望んだ': 'lax',            // hoped (past)
+    '捨てる': 'vins',            // to throw away / abandon
+    '捨て': 'vins',              // throw away (stem/te-form)
+    '捨てた': 'vins',            // threw away
+    '捨てないで': 'vins mi',       // don't throw away
+    '叶う': 'lapn',              // to come true / be fulfilled
+    '叶える': 'lapn',            // to grant / fulfill
+    '叶え': 'lapn',              // fulfill (stem)
+    '叶わない': 'lapn mi',       // cannot be fulfilled
+    '失った': 'tifl',            // lost (past)
+    '失って': 'tifl',            // losing (te-form)
+    '失い': 'tifl',              // loss (stem)
+    '失える': 'tifl',            // can lose
+    '持って': 'til',             // holding (te-form)
+    '持った': 'til',             // held
+    '持つ': 'til',               // to hold/have
+    '持ち': 'til',               // hold (stem)
   };
 
   // --- Japanese → Arka Translation ---
