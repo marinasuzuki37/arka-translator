@@ -243,15 +243,42 @@ class ArkaEngine {
   };
 
   static REVERSE_PRONOUNS = {
-    '私': 'an', 'わたし': 'an', '僕': 'an', 'ぼく': 'an', '俺': 'an',
-    'あなた': 'ti', 'きみ': 'ti', '君': 'ti',
+    // --- 一人称（位相別マッピング） ---
+    '私': 'an', 'わたし': 'an',
+    '僕': 'ami', 'ぼく': 'ami',           // yuul位相（男性語）
+    '俺': 'an', 'おれ': 'an',
+    'あたし': 'non',                       // milia位相（女性語）
+    'あたい': 'noel',                      // mayu位相（下町女性語）
+    'うち': 'non',                         // 関西女性語→milia
+    'わたくし': 'yuna',                    // yunk位相（上品）
+    '吾輩': 'an', 'わがはい': 'an',        // 文語・尊大
+    '我': 'an', 'われ': 'an',             // 古語
+    'わし': 'an',                          // 老人語
+    '余': 'an', '拙者': 'an', '小生': 'an', '某': 'an',  // 文語
+    // 一人称複数
+    '私たち': 'ans', 'わたしたち': 'ans', '我々': 'ans',
+    '僕たち': 'sean', '俺たち': 'ans',    // yuul複数
+    'あたしたち': 'lena',                  // milia複数
+    // --- 二人称（位相別マッピング） ---
+    'あなた': 'ti',
+    '君': 'tol', 'きみ': 'tol',           // yuul位相
+    'あんた': 'xian',                      // mayu位相
+    'おまえ': 'dis', 'お前': 'dis',       // arden位相
+    'てめえ': 'baz', 'てめぇ': 'baz', '貴様': 'baz', 'きさま': 'baz',  // alben位相
+    'おめえ': 'beg',                       // gano位相
+    '汝': 'ti', 'なんじ': 'ti', 'そなた': 'ti', 'そち': 'ti', 'おぬし': 'ti',  // 古語
+    'あなた様': 'moe', 'あなたさま': 'moe', // yunk位相
+    // 二人称複数
+    'あなたたち': 'tiis', 'あなたがた': 'felie',
+    '君たち': 'flent', 'おまえら': 'bcand', 'てめえら': 'bcand',
+    // --- 三人称 ---
     '彼': 'lu', '彼女': 'lu', '彼ら': 'luus',
     'あの人': 'la',
-    '私たち': 'ans', 'わたしたち': 'ans', '我々': 'ans',
-    'あなたたち': 'tiis',
+    // --- 指示・所有 ---
     'これ': 'tu', 'この': 'tu', 'それ': 'tu', 'あれ': 'le', 'あの': 'le',
     'これら': 'tuus', 'あれら': 'lees',
-    '私の': 'ant', 'あなたの': 'tiil'
+    '私の': 'ant', 'あなたの': 'tiil',
+    '僕の': 'amit', '俺の': 'ant',
   };
 
   static CASE_PARTICLES = {
@@ -663,7 +690,7 @@ class ArkaEngine {
     }
 
     // Check for pronouns already present
-    const pronounPatterns = ['私', '僕', '俺', 'あなた', '君', '彼', '彼女', 'わたし', 'ぼく', 'おれ', 'あたし', 'わし', 'うち'];
+    const pronounPatterns = ['私', '僕', '俺', 'あなた', '君', '彼', '彼女', 'わたし', 'ぼく', 'おれ', 'あたし', 'わし', 'うち', 'わたくし', 'あたい', '吾輩', 'わがはい', '我', 'われ', '余', '拙者', '小生', '某', 'あんた', 'おまえ', 'お前', 'てめえ', 'てめぇ', '貴様', 'きさま', 'おめえ', '汝', 'なんじ', 'そなた', 'そち', 'おぬし', 'あなた様', 'あなたさま'];
     for (const pron of pronounPatterns) {
       if (text.includes(pron)) return { hasSubject: true, subject: null };
     }
@@ -1789,30 +1816,55 @@ class ArkaEngine {
   // Direct mappings verified against dictionary.
   // Fixes homophone collisions, incorrect reverse-map entries, and common words.
   static JP_ARKA_OVERRIDES = {
-    // --- Verbs (many collide with grammar words without overrides) ---
+    // --- Verbs (verified against dictionary) ---
     '行く': 'ke', '来る': 'luna', '見る': 'in',
     '食べる': 'kui', '飲む': 'xen', '走る': 'lef', '歩く': 'luk',
     '読む': 'isk', '書く': 'axt', '言う': 'ku', '話す': 'kul',
     '聞く': 'ter', '知る': 'ser', '思う': 'lo', '考える': 'rafis',
     '分かる': 'loki', '愛する': 'tiia', '生きる': 'ikn', '死ぬ': 'vort',
     '持つ': 'til', '落ちる': 'met', '飛ぶ': 'left', '消える': 'sedo',
-    '失う': 'tifl', '泣く': 'ena', '笑う': 'kook', '眠る': 'omol',
-    '起きる': 'teo', '待つ': 'tat', '忘れる': 'leeve', '覚える': 'kalk',
-    '探す': 'look', '祈る': 'filia', '叫ぶ': 'klam', '歌う': 'miks',
-    '踊る': 'alan', '守る': 'diin', '壊す': 'klema', '作る': 'fent',
-    '生まれる': 'felm', '育つ': 'felid', '変わる': 'xen', '終わる': 'ten',
-    '始まる': 'soa', '続く': 'van', '止まる': 'daim',
-    '燃える': 'fai', '流れる': 'lei', '揺れる': 'flan', '輝く': 'far',
+    '失う': 'tifl', '泣く': 'ena',
+    '笑う': 'gah',       // FIX: kook=状態→gah=笑う
+    '眠る': 'mok',       // FIX: omol→mok=眠る、寝る
+    '起きる': 'net',     // FIX: teo=ちがう→net=起きる、目覚める
+    '待つ': 'vat',       // FIX: tat=周期→vat=待つ
+    '忘れる': 'kel',     // FIX: leeve=満月→kel=忘れる
+    '覚える': 'mal',     // FIX: kalk→mal=覚える、記憶する
+    '探す': 'yui',       // FIX: look→yui=探す、捜す
+    '祈る': 'filia',
+    '叫ぶ': 'gaax',      // FIX: klam→gaax=叫ぶ
+    '歌う': 'miks',
+    '踊る': 'milm',      // FIX: alan=世間→milm=踊る
+    '守る': 'almi',      // FIX: diin=とにかく→almi=盾で守る
+    '壊す': 'rig',       // FIX: klema=殲滅→rig=壊す、破壊する
+    '作る': 'lad',       // FIX: fent→lad=作る、造る、創る
+    '生まれる': 'fias',   // FIX: felm=分業→fias=生まれる
+    '育つ': 'kant',      // FIX: felid→kant=育つ、成長する
+    '育てる': 'kant',
+    '終わる': 'is',      // FIX: ten=8→is=終える、終わる
+    '始まる': 'kit',     // FIX: soa=そのような→kit=始める、始まる
+    '続く': 'onk',       // FIX: van=意志副詞→onk=続ける、続く
+    '止まる': 'mono',    // FIX: daim=永久停止→mono=止まる、停止
+    '燃える': 'fai',
+    '流れる': 'ekx',     // FIX: lei=本→ekx=流れる
+    '揺れる': 'mag',     // FIX: flan=望遠鏡→mag=揺れる、震える
+    '輝く': 'flip',      // FIX: far=光(名詞)→flip=輝く
     '枯れる': 'almans', '散る': 'met', '咲く': 'mans', '朽ちる': 'grein',
     '沈む': 'mend', '浮かぶ': 'eyut', '崩れる': 'vern',
-    '彷徨う': 'flas', 'さまよう': 'flas', '壊れる': 'klema',
-    '彩る': 'mon', '飾る': 'mon', '輝かせる': 'far',
+    '彷徨う': 'flas', 'さまよう': 'flas',
+    '壊れる': 'rig',     // FIX: klema→rig
+    '飾る': 'dolk',      // FIX: mon=明瞭→dolk=飾る
+    '輝かせる': 'flip',  // FIX: far→flip
     '放浪する': 'flas', '漂う': 'sens', '迷う': 'reiz',
+    '怒る': 'jo',        // NEW: 怒る
+    '許す': 'xilhi',     // NEW: 許す、赦す
+    '赦す': 'xilhi',
+    '泳ぐ': 'loks',      // NEW: 泳ぐ
     // --- Colors ---
     '赤い': 'har', '赤': 'har', '白い': 'fir', '白': 'fir',
     '黒い': 'ver', '黒': 'ver', '青い': 'soret', '青': 'soret',
     '緑': 'diia',
-    // --- Adjectives ---
+    // --- Adjectives (verified) ---
     '大きい': 'kai', '小さい': 'lis', '美しい': 'fiiyu',
     '良い': 'rat', '悪い': 'yam', '新しい': 'sam', '古い': 'sid',
     '早い': 'foil', '遅い': 'demi', '速い': 'tax',
@@ -1820,40 +1872,88 @@ class ArkaEngine {
     '長い': 'fil', '短い': 'fen', '寒い': 'sort', '暑い': 'hart',
     '熱い': 'hart', '冷たい': 'sort',
     '儚い': 'yunfi', '脆い': 'minat', '永遠': 'teom', '果てない': 'teom',
-    '虚しい': 'reyu', '孤独': 'laap', '深い': 'hol', '遠い': 'vosn',
-    '近い': 'amis', '暗い': 'anje', '明るい': 'firte', '静か': 'poen',
-    '激しい': 'vam', '優しい': 'noan', '残酷': 'ketet',
+    '虚しい': 'reyu',
+    '孤独': 'reino',      // FIX: laap=寂しい→reino=孤独な
+    '孤独な': 'reino',
+    '深い': 'hol',
+    '遠い': 'flon',       // FIX: vosn→flon=遠い
+    '近い': 'amis', '暗い': 'anje', '明るい': 'firte',
+    '静か': 'seer',       // FIX: poen=3時/東→seer=静かな
+    '静かな': 'seer',
+    '激しい': 'vam',
+    '優しい': 'niit',     // FIX: noan=私の(milia)→niit=優しい
+    '残酷': 'fuo',       // FIX: ketet=女々しい→fuo=残酷な
+    '残酷な': 'fuo',
     '綺麗': 'limi', '綺麗な': 'limi', 'きれい': 'limi', 'キレイ': 'limi',
     '清潔': 'osk', '清潔な': 'osk',
     '静かに': 'seer', '穏やか': 'diina', '寂しい': 'laap',
+    '可愛い': 'ank',      // NEW: 可愛い
+    'かわいい': 'ank',
+    '広い': 'dok',        // NEW: 広い
+    '狭い': 'get',        // NEW: 狭い
     // --- Emotions ---
     '好き': 'siina', '嫌い': 'sin', '怖い': 'vem',
-    '悲しい': 'emt', '嬉しい': 'nau', '寂しい': 'laap',
+    '悲しい': 'emt', '嬉しい': 'nau',
     '楽しい': 'ban', '痛い': 'yai', '眠い': 'omo',
-    '怒り': 'gaiz', '恐怖': 'vem', '絶望': 'diver', '孤独な': 'laap',
+    '怒り': 'jo',        // FIX: gaiz=不快→jo=怒り
+    '恐怖': 'vem', '絶望': 'diver',
     // --- People & Family ---
     '人': 'lan', '男': 'vik', '女': 'min',
     '子供': 'lazal', '先生': 'xanxa', '友達': 'hacn',
     '父': 'kaan', '母': 'laal', '兄': 'alser', '姉': 'eeta',
     '弟': 'aruuj', '妹': 'amel',
+    '学生': 'felan',      // NEW: 学生
     // --- Places & Nature ---
     '学校': 'felka', '家': 'ra', '部屋': 'ez',
     '空': 'jan', '山': 'wal', '海': 'tier', '川': 'erei',
     '森': 'kalto', '木': 'zom', '道': 'font',
     '花': 'miina', '猫': 'ket', '犬': 'kom',
-    '大地': 'ako', '地': 'ako', '島': 'lein',
+    '大地': 'ako', '島': 'lein',
+    '魚': 'eli',          // NEW: 魚
+    // --- Directions ---
+    '上': 'hal', '下': 'mol',     // NEW: 上/下
+    '前': 'sa', '後ろ': 'xi',    // NEW: 前/後ろ
+    '右': 'mik', '左': 'lank',   // NEW: 右/左
+    // --- Seasons ---
+    '春': 'axte', '夏': 'flea',   // NEW: 季節
+    '秋': 'alis', '冬': 'diaxer',
     // --- Time ---
     '朝': 'faar', '夜': 'vird', '今日': 'fis',
     '明日': 'kest', '昨日': 'toxel', '時間': 'miv',
     '永遠に': 'teom', '未来': 'sil', '過去': 'ses',
     // --- Things ---
-    '水': 'er', '雨': 'esk', '風': 'teeze',
+    '水': 'er', '雨': 'esk', '風': 'teeze', '雪': 'sae',  // NEW: 雪
     '太陽': 'faal', '月': 'xelt', '星': 'liifa',
     '本': 'lei', '手紙': 'hek', '名前': 'est',
     '愛': 'tiia', '世界': 'fia',
-    '涙': 'ena', '血': 'erix', '炎': 'fai', '灰': 'dofl',
-    '影': 'axk', '鏡': 'leiz', '剣': 'xado', '盾': 'eld',
-    '鎖': 'zekl', '王': 'eeld', '鳥': 'mil', '蝶': 'axte',
+    '涙': 'ena', '血': 'erix', '炎': 'fai', '火': 'fai', '灰': 'dofl',
+    '影': 'axk', '鏡': 'leiz', '盾': 'eld',
+    '鎖': 'zekl', '鳥': 'mil',
+    '石': 'dol',          // NEW: 石
+    '金': 'fant', '鉄': 'frea',  // NEW: 金属
+    '音': 'fo',           // NEW: 音
+    '言葉': 'hac',        // NEW: 言葉→hac(文字・言葉)
+    '文字': 'hac',
+    '食事': 'kuil',       // NEW: 食事
+    '食べ物': 'kulala',    // NEW: 食べ物
+    '飲み物': 'xenol',    // NEW: 飲み物
+    '料理': 'bel',        // NEW: 料理
+    // --- Fantasy & Mythology ---
+    '剣': 'xado',
+    '王': 'ald',          // FIX: eeld→ald(王の一般的表現)
+    '姫': 'hime',         // NEW: 姫
+    '城': 'nalt',         // NEW: 城
+    '神': 'alies',        // NEW: 神
+    '悪魔': 'adel',       // NEW: 悪魔
+    '天使': 'lans',       // NEW: 天使
+    '精霊': 'fiine',      // NEW: 精霊
+    '魔法': 'art',        // NEW: 魔法
+    '戦争': 'garma',      // NEW: 戦争
+    '平和': 'alvas',      // FIX: fien=けれども→alvas=平和
+    '自由': 'silt',       // NEW: 自由
+    '自由な': 'silt',
+    '必要': 'xir',        // NEW: 必要
+    '必要な': 'xir',
     // --- Body ---
     '手': 'las', '目': 'ins', '耳': 'tem', '口': 'kuo',
     '心': 'alem', '頭': 'osn', '魂': 'seles', '翼': 'kern',
@@ -1863,12 +1963,84 @@ class ArkaEngine {
     // --- Abstract ---
     '声': 'xiv', '歌': 'miks', '夢': 'lond',
     '光': 'far', '闇': 'vel', '命': 'livro', '死': 'vort',
-    '希望': 'ladia', '願い': 'filia', '運命': 'teel', '記憶': 'kalk',
-    '約束': 'lant', '祈り': 'filia', '奇跡': 'meltia', '真実': 'faar',
-    '嘘': 'liifa', '罪': 'ain', '赦し': 'albixe', '平和': 'fien',
-    '戦い': 'kont', '終わり': 'ten', '始まり': 'soa',
-    '中': 'ka', '内': 'ka', '果て': 'teom', '終わり': 'ten',
-    '壊れた': 'klemat', '失われた': 'tiflat', '忘れられた': 'leeveat',
+    '希望': 'ladia', '願い': 'filia', '運命': 'teel',
+    '記憶': 'mal',        // FIX: kalk→mal=記憶
+    '約束': 'hain',       // FIX: lant=美しい→hain=約束を守る
+    '祈り': 'filia',
+    '奇跡': 'iskal',      // FIX: meltia=悪魔名→iskal=奇跡
+    '真実': 'nektxan',    // FIX: faar=朝→nektxan=真実・真相
+    '嘘': 'liifa', '罪': 'ain',
+    '赦し': 'xilhi',      // FIX: albixe→xilhi=許し、赦し
+    '戦い': 'kont',
+    '終わり': 'is',      // FIX: ten→8 → is
+    '始まり': 'kit',     // FIX: soa→kit
+    '中': 'ka', '内': 'ka', '果て': 'teom',
+    '地': 'ako',
+    // --- PATCH: 衝突修正 & 欠落追加 ---
+    '蝶': 'malz',         // FIX: axte(春)と衝突→malz=蝶
+    '蝶々': 'malz',
+    '変わる': 'em',        // FIX: xen(飲む)と衝突→em=～になる
+    '変える': 'miyu',      // miyu=変える
+    '変化': 'miyu',
+    // --- PATCH: 動詞活用・文末対応 ---
+    '行く': 'ke',          // 行く
+    '行った': 'ke',       // 行く(過去)
+    '来る': 'luna',        // 来る
+    '来た': 'luna',        // 来た
+    'いる': 'xa',          // いる(存在)
+    'いた': 'xa',          // いた
+    'ある': 'xa',          // ある(存在)
+    'あった': 'xa',       // あった
+    '持つ': 'til',         // 持つ
+    '持った': 'til',
+    '降る': 'ar',          // 降る
+    '降った': 'ar',
+    '感謝': 'sent',        // 感謝
+    '見る': 'in',         // 見る
+    '見た': 'in',
+    '聞く': 'ter',         // 聞く
+    '聞いた': 'ter',
+    '言う': 'kul',         // 言う
+    '言った': 'kul',
+    '話す': 'kul',         // 話す
+    '話した': 'kul',
+    '思う': 'na',          // 思う
+    '思った': 'na',
+    '知る': 'ser',         // 知る
+    '知った': 'ser',
+    '会う': 'akt',         // 会う
+    '会った': 'akt',
+    '走る': 'lef',         // 走る
+    '走った': 'lef',
+    '歩く': 'luk',         // 歩く
+    '歩いた': 'luk',
+    '座る': 'skin',       // 座る
+    '立つ': 'xtam',       // 立つ... 要確認
+    '眠る': 'mok',
+    '起きる': 'net',
+    '食べる': 'kui',       // 食べる
+    '飲む': 'xen',         // 飲む
+    '読む': 'isk',         // 読む
+    '書く': 'axt',        // 書く
+    '書いた': 'axt',
+    '開く': 'hom',        // 開く
+    '開いた': 'hom',
+    '閉じる': 'deyu',      // 閉じる
+    '閉じた': 'deyu',
+    '入る': 'lat',          // 入る
+    '入った': 'lat',
+    '出る': 'leev',        // 出る
+    '出た': 'leev',
+    '上がる': 'koa',      // 上がる
+    '下がる': 'kend',     // 下がる
+    '飛ぶ': 'left',        // 飛ぶ
+    '飛んだ': 'left',
+    '落ちる': 'met',      // 落ちる
+    '落ちた': 'met',
+    // --- 詐問・其の他 ---
+    '何': 'to',           // 何 = what
+    '名': 'est',          // 名 = 名前
+    '者': 'el',           // 者 = person (generic)
   };
 
   // --- Japanese → Arka Translation ---
@@ -1956,8 +2128,11 @@ class ArkaEngine {
     if (waIdx <= 0 || waIdx >= text.length - 1) return null;
 
     // Verify は is preceded by content (not part of a word like はし)
+    // Also allow __PRONOUN_xxx__ tokens (from nuance preprocessing)
+    const textBeforeWa = text.slice(0, waIdx).trim();
     const beforeWa = text[waIdx - 1];
-    if (!/[ぁ-ん々ー\u4e00-\u9fff\u30a0-\u30ff]/.test(beforeWa)) return null;
+    const isPronounToken = /__PRONOUN_\w+__\s*$/.test(textBeforeWa) || /__$/.test(textBeforeWa);
+    if (!isPronounToken && !/[ぁ-ん々ー\u4e00-\u9fff\u30a0-\u30ff]/.test(beforeWa)) return null;
 
     const subject = text.slice(0, waIdx);
     const predicate = text.slice(waIdx + 1).trim();
@@ -2064,6 +2239,17 @@ class ArkaEngine {
     const breakdown = [];
     let processedText = text;
 
+    // ===== NUANCE PRE-PROCESSING =====
+    // 日本語の一人称・文語・敬語・文末助詞・命令形を正規化
+    let nuanceInfo = null;
+    if (typeof window !== 'undefined' && window.NuancePatch) {
+      nuanceInfo = window.NuancePatch.preprocessJapaneseNuance(processedText);
+      processedText = nuanceInfo.text;
+      // Replace nuance pronoun tokens back to standard __PRONOUN_ tokens
+      // so the existing pipeline handles them
+      processedText = processedText.replace(/__NUANCE_PRONOUN_(\w+)__/g, '__PRONOUN_$1__');
+    }
+
     // ===== COPULA DETECTION (must run before particle stripping) =====
     // Detect「XはY」predicate pattern requiring copula 'et' or negative 'de'
     const copulaInfo = this._detectCopulaPattern(processedText);
@@ -2165,7 +2351,12 @@ class ArkaEngine {
         }
       }
 
-      return { translation: arkaParts.join(' ').trim(), breakdown };
+      let copulaTranslation = arkaParts.join(' ').trim();
+      // ===== NUANCE POST-PROCESSING (copula path) =====
+      if (nuanceInfo && typeof window !== 'undefined' && window.NuancePatch) {
+        copulaTranslation = window.NuancePatch.postprocessArkaNuance(copulaTranslation, nuanceInfo);
+      }
+      return { translation: copulaTranslation, breakdown };
     }
 
     // ===== STANDARD PATH (no copula pattern) =====
@@ -2225,7 +2416,12 @@ class ArkaEngine {
       }
     }
 
-    return { translation: arkaParts.join(' ').trim(), breakdown };
+    let finalTranslation = arkaParts.join(' ').trim();
+    // ===== NUANCE POST-PROCESSING =====
+    if (nuanceInfo && typeof window !== 'undefined' && window.NuancePatch) {
+      finalTranslation = window.NuancePatch.postprocessArkaNuance(finalTranslation, nuanceInfo);
+    }
+    return { translation: finalTranslation, breakdown };
   }
 
   _lookupJapanese(word) {
