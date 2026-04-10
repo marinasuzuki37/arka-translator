@@ -165,9 +165,10 @@
     if (aiFallback.enabled && aiFallback.ready && aiFallback.needsFallback(result, text)) {
       showAILoading();
       const dir = direction === 'arka-to-jp' ? 'arka-to-jp' : 'jp-to-arka';
+      const originalText = text;
       aiFallback.translateWithAI(text, dir).then(aiResult => {
         if (aiResult) {
-          appendAIResult(aiResult, dir);
+          appendAIResult(aiResult, dir, originalText);
         } else {
           appendAIRejected();
         }
@@ -212,11 +213,13 @@
     aiSection.innerHTML = `
       <div class="ai-result-header">
         <span class="ai-badge ai-badge-warn">🤖 AI補助</span>
-        <span class="ai-note">AI翻訳に接続できませんでした。初回利用時はPuter.jsのログインが必要です。</span>
+      </div>
+      <div class="ai-error-bilingual">
+        <div class="ai-error-jp">AI連携に失敗しました。管理者にご連絡ください。</div>
+        <div class="ai-error-arka">ark e lidlens fesat. mir okt hoian al.</div>
       </div>
     `;
     aiSection.style.display = 'block';
-    setTimeout(() => { aiSection.style.display = 'none'; }, 6000);
   }
 
   function appendAIRejected() {
@@ -231,7 +234,7 @@
     setTimeout(() => { aiSection.style.display = 'none'; }, 6000);
   }
 
-  function appendAIResult(aiText, dir) {
+  function appendAIResult(aiText, dir, originalText) {
     const aiSection = getOrCreateAISection();
 
     // Double-check: run one more client-side validation
@@ -241,12 +244,42 @@
       return;
     }
 
+    // Round-trip verification
+    const verification = aiFallback.verifyAIOutput(originalText, validated, dir);
+
+    // If verification fails hard, reject the output entirely
+    if (verification.level === 'fail') {
+      aiSection.innerHTML = `
+        <div class="ai-result-header">
+          <span class="ai-badge ai-badge-warn">🤖 AI補助</span>
+          <span class="ai-note">AI出力が逆翻訳検証で不合格となりました</span>
+        </div>
+        <div class="ai-verify-section ai-verify-fail">
+          <div><span class="ai-verify-label">⚠ 検証失敗:</span>${escapeHtml(verification.details)}</div>
+          ${verification.backTranslation ? `<div class="ai-verify-detail">逆翻訳: ${escapeHtml(verification.backTranslation)}</div>` : ''}
+        </div>
+      `;
+      aiSection.style.display = 'block';
+      return;
+    }
+
+    // Build verification badge HTML
+    const verifyClass = verification.level === 'pass' ? 'ai-verify-pass' : 'ai-verify-warn';
+    const verifyIcon = verification.level === 'pass' ? '✅' : '⚠️';
+    const verifyHtml = `
+      <div class="ai-verify-section ${verifyClass}">
+        <div><span class="ai-verify-label">${verifyIcon} 逆翻訳検証:</span>${escapeHtml(verification.details)}</div>
+        ${verification.backTranslation ? `<div class="ai-verify-detail">逆翻訳: ${escapeHtml(verification.backTranslation)}</div>` : ''}
+      </div>
+    `;
+
     aiSection.innerHTML = `
       <div class="ai-result-header">
         <span class="ai-badge">🤖 AI補助翻訳</span>
         <span class="ai-note">辞書にない語をAIが補完（検証済み）</span>
       </div>
       <div class="ai-result-text">${escapeHtml(validated)}</div>
+      ${verifyHtml}
     `;
     aiSection.style.display = 'block';
   }
@@ -346,6 +379,11 @@
       outputText.innerHTML += `<div class="pronunciation-guide"><span class="pron-label">🔊 原文読み:</span> ${escapeHtml(result.pronunciation)}</div>`;
     }
 
+    // Add hacm (Arka script) display for Arka output
+    if (direction === 'jp-to-arka' && result.translation) {
+      appendHacmDisplay(result.translation);
+    }
+
     // Show variant warning if applicable
     if (result.variantWarning) {
       variantWarningEl.style.display = 'block';
@@ -361,6 +399,80 @@
       renderBreakdown(result.breakdown);
     } else {
       breakdownSection.style.display = 'none';
+    }
+  }
+
+  // ===== HACM (ARKA SCRIPT) DISPLAY =====
+  let hacmVisible = false;
+  let hacmFont = 'kardinal';
+
+  function appendHacmDisplay(arkaText) {
+    // Remove any existing hacm section
+    const existing = document.getElementById('hacm-section');
+    if (existing) existing.remove();
+
+    // Extract only the Arka Latin text (strip brackets, markers)
+    const cleanArka = arkaText.replace(/\[.*?\]/g, '').trim();
+    if (!cleanArka) return;
+
+    const section = document.createElement('div');
+    section.id = 'hacm-section';
+    section.innerHTML = `
+      <div class="hacm-controls">
+        <button class="hacm-toggle-btn" id="hacm-toggle" title="幻字表示切替">
+          <span>✨</span> <span>幻字</span>
+        </button>
+        <select class="hacm-font-select" id="hacm-font-select" style="display:none">
+          <option value="kardinal">Kardinal (標準)</option>
+          <option value="alblant">Alblant (印刷標準)</option>
+          <option value="lantia">Lantia</option>
+          <option value="olivia">Olivia</option>
+          <option value="nalnia">Nalnia (イタリック)</option>
+          <option value="fenlil">Fenlil</option>
+          <option value="fialis">Fialis</option>
+          <option value="defans">Defans</option>
+          <option value="inje">Inje</option>
+        </select>
+        <span class="hacm-label" id="hacm-label" style="display:none">書体選択</span>
+      </div>
+      <div class="hacm-display" id="hacm-display" style="display:none">
+        <span class="hacm-text" id="hacm-text">${escapeHtml(cleanArka)}</span>
+      </div>
+    `;
+    outputText.parentNode.insertBefore(section, outputText.nextSibling);
+
+    // Toggle button event
+    const toggleBtn = document.getElementById('hacm-toggle');
+    const display = document.getElementById('hacm-display');
+    const fontSelect = document.getElementById('hacm-font-select');
+    const label = document.getElementById('hacm-label');
+
+    toggleBtn.addEventListener('click', () => {
+      hacmVisible = !hacmVisible;
+      toggleBtn.classList.toggle('active', hacmVisible);
+      display.style.display = hacmVisible ? 'flex' : 'none';
+      fontSelect.style.display = hacmVisible ? 'inline-block' : 'none';
+      label.style.display = hacmVisible ? 'inline' : 'none';
+    });
+
+    // Font select event
+    fontSelect.value = hacmFont;
+    fontSelect.addEventListener('change', () => {
+      hacmFont = fontSelect.value;
+      const hacmTextEl = document.getElementById('hacm-text');
+      // Remove all hacm-* classes and apply the new one
+      hacmTextEl.className = 'hacm-text';
+      if (hacmFont !== 'kardinal') {
+        hacmTextEl.classList.add(`hacm-${hacmFont}`);
+      }
+    });
+
+    // If previously visible, show immediately
+    if (hacmVisible) {
+      toggleBtn.classList.add('active');
+      display.style.display = 'flex';
+      fontSelect.style.display = 'inline-block';
+      label.style.display = 'inline';
     }
   }
 

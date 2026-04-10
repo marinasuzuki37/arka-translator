@@ -488,6 +488,172 @@ ${grammar}${dictExcerpt}`;
     }
   }
 
+  // =============================================
+  // ROUND-TRIP VERIFICATION
+  // =============================================
+
+  /**
+   * Verify AI output by round-trip translation using the rule-based engine.
+   * JP→Arka: translate AI's Arka back to JP via engine, compare with original JP.
+   * Arka→JP: translate AI's JP back to Arka via engine, compare with original Arka.
+   *
+   * Returns { score: 0-1, level: 'pass'|'warn'|'fail', details: string, backTranslation: string }
+   */
+  verifyAIOutput(originalText, aiOutput, direction) {
+    if (!this.engine || !this.engine.ready) {
+      return { score: 0, level: 'warn', details: 'エンジン未準備のため検証スキップ', backTranslation: '' };
+    }
+
+    let backResult, backText;
+    let originalNorm, backNorm;
+
+    try {
+      if (direction === 'jp-to-arka') {
+        // AI produced Arka → translate back to JP via engine
+        backResult = this.engine.translateArkaToJapanese(aiOutput);
+        backText = backResult.translation || '';
+        // Compare original JP with back-translated JP
+        originalNorm = this._normalizeForComparison(originalText, 'jp');
+        backNorm = this._normalizeForComparison(backText, 'jp');
+      } else {
+        // AI produced JP → translate back to Arka via engine
+        backResult = this.engine.translateJapaneseToArka(aiOutput);
+        backText = backResult.translation || '';
+        // Compare original Arka with back-translated Arka
+        originalNorm = this._normalizeForComparison(originalText, 'arka');
+        backNorm = this._normalizeForComparison(backText, 'arka');
+      }
+    } catch (e) {
+      return { score: 0, level: 'warn', details: '逆翻訳処理中にエラー: ' + e.message, backTranslation: '' };
+    }
+
+    // Calculate similarity
+    const score = this._semanticSimilarity(originalNorm, backNorm, direction);
+
+    let level, details;
+    if (score >= 0.6) {
+      level = 'pass';
+      details = `逆翻訳一致率 ${Math.round(score * 100)}% — 翻訳品質良好`;
+    } else if (score >= 0.3) {
+      level = 'warn';
+      details = `逆翻訳一致率 ${Math.round(score * 100)}% — 一部の意味が欠落している可能性`;
+    } else {
+      level = 'fail';
+      details = `逆翻訳一致率 ${Math.round(score * 100)}% — 翻訳が出鱈目な可能性あり`;
+    }
+
+    return { score, level, details, backTranslation: backText };
+  }
+
+  /**
+   * Normalize text for comparison: strip punctuation, normalize whitespace, lowercase.
+   */
+  _normalizeForComparison(text, lang) {
+    if (!text) return '';
+    let t = text.toLowerCase();
+    // Remove bracketed untranslatable markers
+    t = t.replace(/[\[\[\]\]（）()]/g, '');
+    t = t.replace(/翻訳不能/g, '');
+    t = t.replace(/不明/g, '');
+    // Remove common punctuation
+    t = t.replace(/[。、！？!?,.:;…・—–\-\/\\'"「」『』《》【】〔〕〈〉]/g, '');
+    // Normalize whitespace
+    t = t.replace(/\s+/g, ' ').trim();
+    return t;
+  }
+
+  /**
+   * Compute semantic similarity between original and back-translated text.
+   * Uses word-level overlap (Jaccard-like) with content-word weighting.
+   */
+  _semanticSimilarity(original, backTranslated, direction) {
+    if (!original || !backTranslated) return 0;
+    if (original === backTranslated) return 1.0;
+
+    // Tokenize differently based on language
+    const origTokens = this._tokenize(original, direction === 'jp-to-arka' ? 'jp' : 'arka');
+    const backTokens = this._tokenize(backTranslated, direction === 'jp-to-arka' ? 'jp' : 'arka');
+
+    if (origTokens.length === 0) return 0;
+
+    // Count shared tokens (content words weighted more)
+    const origSet = new Set(origTokens);
+    const backSet = new Set(backTokens);
+
+    let sharedWeight = 0;
+    let totalWeight = 0;
+
+    for (const token of origSet) {
+      const w = this._tokenWeight(token, direction === 'jp-to-arka' ? 'jp' : 'arka');
+      totalWeight += w;
+      if (backSet.has(token)) {
+        sharedWeight += w;
+      } else {
+        // Partial match: check if any back token contains or is contained by this token
+        for (const bt of backSet) {
+          if (token.length >= 2 && bt.length >= 2) {
+            if (token.includes(bt) || bt.includes(token)) {
+              sharedWeight += w * 0.5;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Also penalize if back-translation has lots of untranslated markers
+    const untranslated = (backTokens.join(' ').match(/翻訳不能|不明/g) || []).length;
+    const penalty = Math.min(untranslated * 0.1, 0.4);
+
+    const rawScore = totalWeight > 0 ? sharedWeight / totalWeight : 0;
+    return Math.max(0, Math.min(1, rawScore - penalty));
+  }
+
+  /**
+   * Tokenize text into content words.
+   */
+  _tokenize(text, lang) {
+    if (lang === 'jp') {
+      // For Japanese: split into character n-grams and identifiable substrings
+      // Use a mix of kanji/katakana word extraction + character bigrams
+      const tokens = [];
+      // Extract kanji words (sequences of kanji)
+      const kanjiWords = text.match(/[\u4E00-\u9FFF]+/g) || [];
+      tokens.push(...kanjiWords);
+      // Extract katakana words
+      const kataWords = text.match(/[\u30A0-\u30FF]+/g) || [];
+      tokens.push(...kataWords);
+      // Extract hiragana bigrams for function word matching
+      const hira = text.match(/[\u3040-\u309F]{2,}/g) || [];
+      for (const h of hira) {
+        if (h.length >= 2) tokens.push(h);
+      }
+      return tokens.filter(t => t.length >= 1);
+    } else {
+      // For Arka/Latin: split on spaces
+      return text.split(/\s+/).filter(t => t.length >= 2);
+    }
+  }
+
+  /**
+   * Weight for content vs function words.
+   */
+  _tokenWeight(token, lang) {
+    if (lang === 'jp') {
+      // Kanji/Katakana = content words (higher weight)
+      if (/[\u4E00-\u9FFF\u30A0-\u30FF]/.test(token)) return 2.0;
+      // Hiragana = often particles/function words
+      return 0.5;
+    } else {
+      // Arka: function words (格詞, 代名詞, etc.) get lower weight
+      const funcWords = new Set(['e', 'a', 'al', 'i', 'it', 'ka', 'im', 'kon', 'ok', 'ol',
+        'an', 'ti', 'lu', 'la', 'ans', 'ke', 'son', 'tal', 'fok', 'ar',
+        'tu', 'le', 'nos', 'yan', 'del', 'man', 'on', 'en']);
+      if (funcWords.has(token)) return 0.5;
+      return 2.0;
+    }
+  }
+
   // Combined translation: rule-based first, then AI if needed
   async translateWithFallback(text, direction, ruleResult) {
     if (!this.enabled || !this.ready) {

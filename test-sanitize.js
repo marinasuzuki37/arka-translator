@@ -213,5 +213,119 @@ test('LLMが中国語で回答した場合(Arka→JP)', () => {
   console.log('    (Chinese Kanji edge case - ' + (r.rejected ? 'REJECTED' : 'passed - Kanji overlap') + ')');
 });
 
+// =============================================
+// ROUND-TRIP VERIFICATION TESTS
+// =============================================
+
+console.log('\n=== ラウンドトリップ検証テスト ===\n');
+
+// Create a mock engine that simulates basic translation
+const mockEngine = {
+  ready: true,
+  translateArkaToJapanese(text) {
+    // Simple mock: map known Arka words to JP
+    const map = {
+      'an': '私', 'ti': 'あなた', 'lu': '彼', 'lad': '食べる',
+      'ladat': '食べた', 'luna': '月', 'ket': '猫', 'seren': 'セレン',
+      'fia': '水', 'non': '名前', 'salt': '殺す', 'xion': '心',
+      'lax': 'したい', 'fir': '火', 'teo': '神', 'vil': 'できない',
+      'sen': 'できる', 'ik': '行く', 'kul': '来る', 'siina': '美しい'
+    };
+    const words = text.toLowerCase().split(/\s+/);
+    const translated = words.map(w => map[w] || `[${w}]`).join('');
+    return { translation: translated };
+  },
+  translateJapaneseToArka(text) {
+    // Simple mock: map known JP to Arka
+    const map = {
+      '私': 'an', 'あなた': 'ti', '猫': 'ket', '月': 'luna',
+      '食べる': 'lad', '食べたい': 'lad lax', '水': 'fia',
+      '名前': 'non', '心': 'xion', '火': 'fir', '神': 'teo',
+      '美しい': 'siina', '行く': 'ik', '来る': 'kul'
+    };
+    // Very rough: try to find known substrings
+    let result = text;
+    for (const [jp, arka] of Object.entries(map)) {
+      result = result.replace(jp, arka);
+    }
+    return { translation: result };
+  }
+};
+
+const fallbackWithEngine = new ArkaAIFallback(mockEngine);
+
+test('逆翻訳検証: 正確なアルカ出力 (高スコア)', () => {
+  // Original JP: 私は猫を食べたい → AI Arka: an lad ket lax
+  // Back-translate via mock: 私猫食べるしたい → shares 私, 猫, 食べ, したい with original
+  const v = fallbackWithEngine.verifyAIOutput('私は猫を食べたい', 'an lad ket lax', 'jp-to-arka');
+  assert(v.score > 0, `Score should be > 0, got ${v.score}`);
+  assert(v.level !== 'fail', `Should not fail, got ${v.level}`);
+  assert(v.backTranslation.length > 0, 'Should have back-translation');
+});
+
+test('逆翻訳検証: 完全に出鱈目なアルカ出力 (低スコア)', () => {
+  // Original JP: 私は猫を食べたい → AI Arka: xyz abc def (nonsense)
+  const v = fallbackWithEngine.verifyAIOutput('私は猫を食べたい', 'xyz abc def', 'jp-to-arka');
+  // Mock will produce [xyz][abc][def] — no overlap with original JP
+  assert(v.score < 0.3, `Score should be low for nonsense, got ${v.score}`);
+});
+
+test('逆翻訳検証: エンジン未準備時はwarn', () => {
+  const noEngine = new ArkaAIFallback(null);
+  const v = noEngine.verifyAIOutput('テスト', 'test', 'jp-to-arka');
+  assert(v.level === 'warn', 'Should return warn when engine not ready');
+});
+
+test('逆翻訳検証: 空の入力', () => {
+  const v = fallbackWithEngine.verifyAIOutput('', '', 'jp-to-arka');
+  assert(v.score === 0, 'Empty input should score 0');
+});
+
+test('正規化: 句読点・括弧が除去される', () => {
+  const n1 = fallbackWithEngine._normalizeForComparison('私は！猫、を。食べたい', 'jp');
+  const n2 = fallbackWithEngine._normalizeForComparison('私は猫を食べたい', 'jp');
+  assert(n1 === n2, `Normalized texts should match: "${n1}" vs "${n2}"`);
+});
+
+test('正規化: [翻訳不能]マーカーが除去される', () => {
+  const n = fallbackWithEngine._normalizeForComparison('an lad [翻訳不能] ket', 'arka');
+  assert(!n.includes('翻訳不能'), 'Untranslatable markers should be removed');
+});
+
+test('トークン化: 日本語の漢字・カタカナ分離', () => {
+  const tokens = fallbackWithEngine._tokenize('私は猫を食べたい', 'jp');
+  assert(tokens.length > 0, 'Should produce tokens');
+  // Should extract kanji: 私, 猫, 食
+  const hasKanji = tokens.some(t => /[\u4E00-\u9FFF]/.test(t));
+  assert(hasKanji, 'Should extract kanji tokens');
+});
+
+test('トークン化: アルカのスペース分割', () => {
+  const tokens = fallbackWithEngine._tokenize('an lad ket lax', 'arka');
+  assert(tokens.length === 4, `Should have 4 tokens, got ${tokens.length}`);
+});
+
+test('トークン重み: 格詞は低重み', () => {
+  const wContent = fallbackWithEngine._tokenWeight('luna', 'arka');
+  const wFunc = fallbackWithEngine._tokenWeight('e', 'arka');
+  assert(wContent > wFunc, 'Content words should weigh more than function words');
+});
+
+test('トークン重み: 漢字は高重み', () => {
+  const wKanji = fallbackWithEngine._tokenWeight('猫', 'jp');
+  const wHira = fallbackWithEngine._tokenWeight('は', 'jp');
+  assert(wKanji > wHira, 'Kanji should weigh more than hiragana');
+});
+
+test('類似度: 完全一致は1.0', () => {
+  const s = fallbackWithEngine._semanticSimilarity('test text', 'test text', 'arka-to-jp');
+  assert(s === 1.0, `Perfect match should be 1.0, got ${s}`);
+});
+
+test('類似度: 完全不一致は0に近い', () => {
+  const s = fallbackWithEngine._semanticSimilarity('abc def ghi', 'xyz uvw rst', 'arka-to-jp');
+  assert(s < 0.1, `No overlap should be near 0, got ${s}`);
+});
+
 console.log(`\n=== 結果: ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed > 0 ? 1 : 0);
