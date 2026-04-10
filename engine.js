@@ -98,7 +98,18 @@ class ArkaEngine {
     'kon': '～で(道具)',
     'ok': '～と一緒に',
     'ol': 'もし',
-    'le': '(関係節)'
+    'le': '(関係節)',
+    'e': '～の'
+  };
+
+  static TENSE_MARKERS = {
+    'at': '(過去)', 'ses': '(経験過去)'
+  };
+
+  static CONJUNCTIONS = {
+    'ke': 'そして', 'son': 'だから', 'yan': 'しかし', 'fok': 'なぜなら',
+    'ku': 'だから', 'ar': '(理由)', 'mil': '(目的)', 'lo': '(方法)',
+    'yul': '(対象)'
   };
 
   static MODAL_ADVERBS = {
@@ -207,6 +218,20 @@ class ArkaEngine {
       return result;
     }
 
+    // Check tense markers
+    if (ArkaEngine.TENSE_MARKERS[lower]) {
+      result.type = 'tense';
+      result.meaning = ArkaEngine.TENSE_MARKERS[lower];
+      return result;
+    }
+
+    // Check conjunctions
+    if (ArkaEngine.CONJUNCTIONS[lower]) {
+      result.type = 'conjunction';
+      result.meaning = ArkaEngine.CONJUNCTIONS[lower];
+      return result;
+    }
+
     // Check negation prefix
     if (lower === 'en') {
       result.type = 'negation';
@@ -291,7 +316,9 @@ class ArkaEngine {
   translateArkaToJapanese(text) {
     if (!text.trim()) return { translation: '', breakdown: [] };
 
-    const sentences = text.split(/([.!?。！？]+)/);
+    // Strip outer quotes before processing
+    const cleanedText = text.replace(/["""'']/g, ' ').trim();
+    const sentences = cleanedText.split(/([.!?。！？]+)/);
     const allBreakdown = [];
     let fullTranslation = '';
 
@@ -303,8 +330,25 @@ class ArkaEngine {
       }
       if (!sentence.trim()) continue;
 
-      const tokens = sentence.trim().split(/\s+/).filter(Boolean);
-      const analyzed = tokens.map(t => this.analyzeToken(t));
+      // Pre-process: expand apostrophe contractions (e.g., l'at → l at, t'arbazard → t arbazard)
+      const rawTokens = sentence.trim().split(/\s+/).filter(Boolean);
+      const tokens = [];
+      for (const t of rawTokens) {
+        // Handle comma-attached tokens (e.g., "word,")
+        const commaMatch = t.match(/^(.+?)(,)$/);
+        const base = commaMatch ? commaMatch[1] : t;
+        
+        // Expand apostrophe contractions
+        const apoMatch = base.match(/^([a-zA-Z]+)'([a-zA-Z]+)$/);
+        if (apoMatch) {
+          tokens.push(apoMatch[1]);
+          tokens.push(apoMatch[2]);
+        } else {
+          tokens.push(base);
+        }
+        if (commaMatch) tokens.push(',');
+      }
+      const analyzed = tokens.filter(t => t !== ',').map(t => this.analyzeToken(t));
       allBreakdown.push(...analyzed);
 
       const jpParts = [];
@@ -338,6 +382,20 @@ class ArkaEngine {
           } else {
             modalAdverb = a;
           }
+          i++;
+          continue;
+        }
+
+        // Handle tense markers
+        if (a.type === 'tense') {
+          jpParts.push(a.meaning);
+          i++;
+          continue;
+        }
+
+        // Handle conjunctions
+        if (a.type === 'conjunction') {
+          jpParts.push(a.meaning);
           i++;
           continue;
         }
