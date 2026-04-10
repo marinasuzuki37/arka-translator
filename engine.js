@@ -7,6 +7,7 @@ class ArkaEngine {
     this.wordMap = new Map();      // arka word → entry
     this.reverseMap = new Map();   // japanese keyword → [{arkaWord, entry, score}]
     this.sentenceMemory = [];      // parallel corpus for sentence-level matching
+    this.greetingsMap = new Map(); // greeting word → Japanese meaning
     this.ready = false;
   }
 
@@ -14,10 +15,11 @@ class ArkaEngine {
   async init(dictData) {
     this.dict = dictData;
     this._buildIndices();
-    // Load sentence memory and wiki vocab in parallel
+    // Load sentence memory, wiki vocab, and greetings in parallel
     await Promise.all([
       this._loadSentenceMemoryFromFile(),
-      this._loadWikiVocab()
+      this._loadWikiVocab(),
+      this._loadGreetings()
     ]);
     this.ready = true;
   }
@@ -98,6 +100,34 @@ class ArkaEngine {
       {arka:"yan elen sein es lufabad al aks.", ja:"そして机が床に散乱していた。"},
       {arka:"fok tu aks til eri hanel.", ja:"しかもその床には血が一面に広がっていた。"},
     ];
+  }
+
+  // Load greetings from external JSON
+  async _loadGreetings() {
+    try {
+      const resp = await fetch('greetings.json');
+      if (resp.ok) {
+        const data = await resp.json();
+        for (const [word, meaning] of Object.entries(data)) {
+          this.greetingsMap.set(word.toLowerCase(), meaning);
+        }
+        // Hardcoded entries have more nuanced meanings - override JSON for those
+        for (const [word, meaning] of Object.entries(ArkaEngine.GREETINGS)) {
+          this.greetingsMap.set(word, meaning);
+        }
+        console.log(`Loaded ${this.greetingsMap.size} greeting expressions`);
+      } else {
+        // Fallback to static
+        for (const [word, meaning] of Object.entries(ArkaEngine.GREETINGS)) {
+          this.greetingsMap.set(word, meaning);
+        }
+      }
+    } catch (e) {
+      console.warn('Error loading greetings.json:', e);
+      for (const [word, meaning] of Object.entries(ArkaEngine.GREETINGS)) {
+        this.greetingsMap.set(word, meaning);
+      }
+    }
   }
 
   // Load wiki vocabulary supplement
@@ -293,10 +323,10 @@ class ArkaEngine {
       return result;
     }
 
-    // Check greetings
-    if (ArkaEngine.GREETINGS[lower]) {
+    // Check greetings (from dynamically loaded greetings map)
+    if (this.greetingsMap.has(lower)) {
       result.type = 'greeting';
-      result.meaning = ArkaEngine.GREETINGS[lower];
+      result.meaning = this.greetingsMap.get(lower);
       return result;
     }
 
