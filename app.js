@@ -47,7 +47,9 @@
       const resp = await fetch('dictionary.json');
       const data = await resp.json();
       await engine.init(data);
-      document.getElementById('dict-count').textContent = `辞書: ${data.length.toLocaleString()}語`;
+      const totalWords = engine.wordMap.size;
+      const totalSentences = engine.sentenceMemory.length;
+      document.getElementById('dict-count').textContent = `辞書: ${totalWords.toLocaleString()}語 / 対訳: ${totalSentences}文`;
       document.getElementById('loading-overlay').classList.add('hidden');
     } catch (err) {
       console.error('Dictionary load failed:', err);
@@ -104,8 +106,25 @@
       result = engine.translateJapaneseToArka(text);
     }
 
+    // Show sentence-level match if available (Arka→JP only)
+    let sentenceMatchHtml = '';
+    if (direction === 'arka-to-jp' && result.sentenceMatch) {
+      const sm = result.sentenceMatch;
+      const pct = Math.round(sm.score * 100);
+      const typeLabel = sm.type === 'exact' ? '完全一致' : `類似一致 (${pct}%)`;
+      const pageLabel = sm.match.page ? ` [p.${sm.match.page}]` : '';
+      sentenceMatchHtml = `<div class="sentence-match">
+        <div class="sentence-match-label">📖 対訳コーパス: ${typeLabel}${pageLabel}</div>
+        <div class="sentence-match-text">${escapeHtml(sm.match.ja)}</div>
+      </div>`;
+    }
+
     // Show translation
-    outputText.textContent = result.translation || '翻訳できませんでした';
+    if (sentenceMatchHtml) {
+      outputText.innerHTML = sentenceMatchHtml + `<div class="gloss-translation"><span class="gloss-label">語釈:</span> ${escapeHtml(result.translation || '')}</div>`;
+    } else {
+      outputText.textContent = result.translation || '翻訳できませんでした';
+    }
 
     // Show breakdown
     if (result.breakdown && result.breakdown.length > 0) {
@@ -372,14 +391,56 @@
           <table class="grammar-table">
             <thead><tr><th>格詞</th><th>日本語</th><th>用例</th></tr></thead>
             <tbody>
+              <tr><td class="arka-cell">e</td><td class="jp-cell">～の (属格)</td><td>omi e felez (教室の扉)</td></tr>
               <tr><td class="arka-cell">a / al</td><td class="jp-cell">～に/～へ (与格)</td><td>母音前ではal</td></tr>
               <tr><td class="arka-cell">i / it</td><td class="jp-cell">～から (奪格)</td><td>母音前ではit</td></tr>
               <tr><td class="arka-cell">ka</td><td class="jp-cell">～で/～に (場所)</td><td>場所の格</td></tr>
               <tr><td class="arka-cell">im</td><td class="jp-cell">～のとき/～に (時間)</td><td>時間の格</td></tr>
               <tr><td class="arka-cell">kon</td><td class="jp-cell">～で (道具)</td><td>道具の格</td></tr>
               <tr><td class="arka-cell">ok</td><td class="jp-cell">～と一緒に</td><td>共格</td></tr>
-              <tr><td class="arka-cell">ol</td><td class="jp-cell">もし</td><td>条件</td></tr>
+              <tr><td class="arka-cell">ol</td><td class="jp-cell">もし (条件)</td><td>条件の格</td></tr>
+              <tr><td class="arka-cell">kont</td><td class="jp-cell">～しながら</td><td>同時行為</td></tr>
+              <tr><td class="arka-cell">frem</td><td class="jp-cell">～の近くに</td><td>近接</td></tr>
+              <tr><td class="arka-cell">pot</td><td class="jp-cell">～の中に</td><td>内部</td></tr>
+              <tr><td class="arka-cell">yun</td><td class="jp-cell">～のように</td><td>比況</td></tr>
+              <tr><td class="arka-cell">xed</td><td class="jp-cell">～なしで</td><td>欠如</td></tr>
+              <tr><td class="arka-cell">emo</td><td class="jp-cell">～から判断して</td><td>判断根拠</td></tr>
               <tr><td class="arka-cell">le</td><td class="jp-cell">(関係節接続)</td><td>関係節</td></tr>
+            </tbody>
+          </table>
+        `
+      },
+      {
+        title: '派生形態 (動副詞・分詞)',
+        content: `
+          <p class="grammar-note">アルカ語では動詞や形容詞に接尾辞を付けて副詞や名詞を派生します。</p>
+          <table class="grammar-table">
+            <thead><tr><th>接尾辞</th><th>名称</th><th>意味</th><th>例</th></tr></thead>
+            <tbody>
+              <tr><td class="arka-cell">-el</td><td>動副詞</td><td class="jp-cell">～して/～く(副詞的)</td><td>mald→maldel (騒いで), vam→vamel (乱暴に), han→hanel (広く)</td></tr>
+              <tr><td class="arka-cell">-an</td><td>主格分詞</td><td class="jp-cell">～する者/～した者</td><td>fals→falsan (生き延びた者)</td></tr>
+              <tr><td class="arka-cell">-ol</td><td>対格分詞</td><td class="jp-cell">～されるもの</td><td>klam→klamol (愛されるもの)</td></tr>
+            </tbody>
+          </table>
+          <p class="grammar-note">es(継続相の繋辞)は動詞の前に置かれ、自動詞化や結果状態を表します。例: es rig (壊れている), es ekx (流れている)</p>
+        `
+      },
+      {
+        title: '純詞 (文頭・文末)',
+        content: `
+          <p class="grammar-note">純詞は文頭または文末に置かれ、文全体のニュアンスを表します。</p>
+          <table class="grammar-table">
+            <thead><tr><th>純詞</th><th>位置</th><th>意味</th></tr></thead>
+            <tbody>
+              <tr><td class="arka-cell">tio</td><td>文頭</td><td class="jp-cell">単なる/ただ～だけ</td></tr>
+              <tr><td class="arka-cell">ala</td><td>文頭</td><td class="jp-cell">一体(修辞疑問/非難)</td></tr>
+              <tr><td class="arka-cell">taik</td><td>文頭</td><td class="jp-cell">更には/その上</td></tr>
+              <tr><td class="arka-cell">tan</td><td>文中/文頭</td><td class="jp-cell">やはり</td></tr>
+              <tr><td class="arka-cell">hot</td><td>文中</td><td class="jp-cell">～しか</td></tr>
+              <tr><td class="arka-cell">tis</td><td>文中</td><td class="jp-cell">～すら/～さえ</td></tr>
+              <tr><td class="arka-cell">sei</td><td>文末</td><td class="jp-cell">～だろうか(推量)</td></tr>
+              <tr><td class="arka-cell">in</td><td>文末</td><td class="jp-cell">～のようだ(視覚推量)</td></tr>
+              <tr><td class="arka-cell">xan</td><td>文末</td><td class="jp-cell">～だったのか(気付き)</td></tr>
             </tbody>
           </table>
         `
