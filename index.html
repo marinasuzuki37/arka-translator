@@ -168,7 +168,31 @@
 
   <footer class="app-footer">
     <p>幻訳 — 人工言語アルカの自動翻訳システム</p>
+    <p class="footer-credits">本システムはセレン＝アルバザード氏の制作物に基づいています — <a href="#" id="show-credits">謝辞</a> · <a href="https://github.com/marinasuzuki37/arka-translator/blob/main/LICENSE" target="_blank" rel="noopener">SRL v1.0</a></p>
   </footer>
+
+  <!-- Credits Modal -->
+  <div class="modal-overlay" id="credits-modal" style="display:none;">
+    <div class="modal-content credits-modal-content">
+      <button class="modal-close" id="credits-close" aria-label="閉じる">&times;</button>
+      <h2>謝辞</h2>
+      <div class="credits-body">
+        <h3>アルカの創造者</h3>
+        <p><strong>セレン＝アルバザード（seren arbazard）氏</strong></p>
+        <p>人工言語アルカの作者。1991年より言語制作に携わり、古アルカ・制アルカ・新生アルカと数度にわたる大改定を経て、語彙数15,000語以上、独自の文字体系（幻字 hacm）、音韻・文法体系を備えた精緻な言語を築き上げました。『紫苑の書』『人工言語学・アルカ』『幻日辞典』など数多くの著作を通じてアルカの知識を世に伝えてくださいました。</p>
+        <h3>コミュニティ・資料提供</h3>
+        <ul>
+          <li><strong>人工言語学研究会</strong>（conlinguistics.org）— 公式資料・辞書の公開</li>
+          <li><strong>アルカ @Wiki 編集者の皆様</strong> — 文法・語彙の情報集積</li>
+          <li><strong>メリディア @Wiki 編集者の皆様</strong> — 対訳データの整理</li>
+          <li><strong>人工言語学Wiki</strong> — 学術的記録への貢献</li>
+          <li>アルカの議論・研究・普及に貢献してくださったすべての方々</li>
+        </ul>
+        <p class="credits-closing">アルカは「繋ぐ」を意味する言葉です。この翻訳システムが、アルカと人々を繋ぐ架け橋となれば幸いです。</p>
+        <p class="credits-arka">seten, ento lad im et.<br><span class="credits-arka-jp">（感謝を、すべての人々に。）</span></p>
+      </div>
+    </div>
+  </div>
 
   <script src="variants.js"></script>
   <script src="nuance-patch.js"></script>

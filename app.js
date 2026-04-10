@@ -1125,6 +1125,24 @@
 
   buildGrammarContent();
 
+  // --- Credits Modal ---
+  const creditsLink = document.getElementById('show-credits');
+  const creditsModal = document.getElementById('credits-modal');
+  const creditsClose = document.getElementById('credits-close');
+
+  if (creditsLink && creditsModal) {
+    creditsLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      creditsModal.style.display = 'flex';
+    });
+    creditsClose && creditsClose.addEventListener('click', () => {
+      creditsModal.style.display = 'none';
+    });
+    creditsModal.addEventListener('click', (e) => {
+      if (e.target === creditsModal) creditsModal.style.display = 'none';
+    });
+  }
+
   // --- Utility ---
   function escapeHtml(str) {
     const div = document.createElement('div');
