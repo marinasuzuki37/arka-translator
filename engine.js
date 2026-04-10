@@ -27,10 +27,29 @@ class ArkaEngine {
 
   _buildIndices() {
     // Forward index: arka → entry
+    // For homographs like ket/ket(2), store ALL entries and pick the most common/useful one
+    const allEntries = new Map(); // key → [entry, entry, ...]
     for (const entry of this.dict) {
       const key = entry.word.toLowerCase().replace(/\(\d+\)$/, '').trim();
-      if (!this.wordMap.has(key)) {
-        this.wordMap.set(key, entry);
+      if (!allEntries.has(key)) allEntries.set(key, []);
+      allEntries.get(key).push(entry);
+    }
+    // For single entries, just use them. For multiple, prefer the one with more common meaning.
+    for (const [key, entries] of allEntries) {
+      if (entries.length === 1) {
+        this.wordMap.set(key, entries[0]);
+      } else {
+        // Pick the entry whose meaning contains common Japanese words (not technical/specialized)
+        // Prefer entries with shorter, more common meanings
+        let best = entries[0];
+        for (const e of entries) {
+          const m = e.meaning || '';
+          // Prefer entries with common noun/verb meanings over letter/symbol meanings
+          if (m.includes('の文字') || m.includes('接尾辞') || m.includes('接頭辞')) continue;
+          best = e;
+          break;
+        }
+        this.wordMap.set(key, best);
       }
     }
 
@@ -61,14 +80,24 @@ class ArkaEngine {
     const keywords = new Set();
     let cleaned = meaning.replace(/［[^］]+］/g, '');
     const parts = cleaned.split(/[、。；;,\/（）()～〜・！？!?\s]+/);
+    // Japanese particles/single-char words that must never be standalone keywords
+    const STOP_WORDS = new Set([
+      'は', 'が', 'の', 'に', 'へ', 'で', 'と', 'も', 'を',
+      'い', 'う', 'え', 'お', 'か', 'こ', 'そ', 'な', 'ね',
+      'よ', 'れ', 'ろ', 'わ', 'ん', 'だ', 'た', 'て', 'し',
+      'ハイ', 'やぁ', 'やあ', 'は～い'
+    ]);
     for (let part of parts) {
       part = part.trim();
-      if (part.length >= 1 && part.length <= 20) {
+      // Require minimum 2 chars to avoid single-particle pollution
+      if (part.length >= 2 && part.length <= 20) {
+        if (!STOP_WORDS.has(part)) {
+          keywords.add(part);
+        }
         const stripped = part.replace(/[をはがのにへでとも]$/g, '');
-        if (stripped.length >= 1) {
+        if (stripped.length >= 2 && stripped !== part && !STOP_WORDS.has(stripped)) {
           keywords.add(stripped);
         }
-        if (part !== stripped) keywords.add(part);
       }
     }
     return keywords;
@@ -698,7 +727,8 @@ class ArkaEngine {
     // Check greetings (from dynamically loaded greetings map)
     if (this.greetingsMap.has(lower)) {
       result.type = 'greeting';
-      result.meaning = this.greetingsMap.get(lower);
+      // Strip annotations like (丁寧), (恩恵) etc. for clean translation
+      result.meaning = this.greetingsMap.get(lower).replace(/\([^)]+\)/g, '').trim();
       return result;
     }
 
@@ -865,7 +895,7 @@ class ArkaEngine {
       // Check if stem is a known greeting
       if (this.greetingsMap.has(stem)) {
         result.type = 'greeting';
-        result.meaning = this.greetingsMap.get(stem) + '[丁寧]';
+        result.meaning = this.greetingsMap.get(stem).replace(/\([^)]+\)/g, '').trim();
         return result;
       }
       // Check if stem is a sentence particle
@@ -903,33 +933,46 @@ class ArkaEngine {
 
   _extractCoreMeaning(meaningStr) {
     if (!meaningStr) return '';
-    // Remove POS tags like ［名詞］
-    let cleaned = meaningStr.replace(/［[^］]+］/g, ' ').trim();
-    // Split by various delimiters and get the first meaningful segment
-    const segments = cleaned.split(/[。；]/)[0];
-    // Split by comma or 、 to get individual meanings
-    const parts = segments.split(/[、,]+/);
-    // Collect up to 2-3 short meanings for better translation
-    const meanings = [];
-    for (const part of parts) {
-      const trimmed = part.trim();
-      // Skip yulを～ patterns and very long entries
-      if (trimmed && trimmed.length > 0 && !trimmed.startsWith('yulを') && !trimmed.startsWith('yulに') && !trimmed.startsWith('yulが')) {
-        if (trimmed.length <= 15) {
-          meanings.push(trimmed);
-          if (meanings.length >= 2) break;
-        } else if (meanings.length === 0) {
-          meanings.push(trimmed.slice(0, 15) + '…');
-          break;
+    // Split by POS tags to get sections
+    const sections = meaningStr.split(/［[^］]+］/).filter(s => s.trim());
+    
+    // Katakana-only names (like ミーナ, ハール) that are just readings of the Arka word
+    const isKatakanaName = (s) => /^[\u30A0-\u30FFー・]+$/.test(s.trim());
+    // Check if string is a sentence (has 。 or is very long)
+    const isSentence = (s) => s.includes('。') || s.length > 15;
+    
+    // Try each section to find the best Japanese meaning
+    for (const section of sections) {
+      // Split by 。 first to avoid joining sentences, then by comma
+      const sentences = section.split(/。/)[0]; // Only take before first period
+      const parts = sentences.split(/[、,]+/);
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (!trimmed || trimmed.length === 0) continue;
+        // Skip: yul patterns, romaji, long explanations
+        if (trimmed.startsWith('yul') || trimmed.startsWith('xen ')) continue;
+        if (/^[a-zA-Z]/.test(trimmed)) continue;
+        if (isKatakanaName(trimmed) && trimmed.length <= 5) continue;
+        if (trimmed.length > 15) continue;
+        if (trimmed.includes('→') || trimmed.includes('←')) continue;
+        if (trimmed.startsWith('～')) continue;
+        // Skip generic/grammar-like short entries
+        if (trimmed.length === 1 && /[あ-ん]/.test(trimmed)) continue;
+        return trimmed;
+      }
+    }
+    
+    // Fallback: just get the first non-empty short part
+    for (const section of sections) {
+      const parts = section.split(/[、,。]+/);
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (trimmed && trimmed.length > 0 && trimmed.length <= 10) {
+          return trimmed;
         }
       }
     }
-    // If we still have nothing, try taking the first part
-    if (meanings.length === 0) {
-      const first = parts[0]?.trim() || '';
-      if (first) meanings.push(first.length > 15 ? first.slice(0, 15) + '…' : first);
-    }
-    return meanings.join('/');
+    return '';
   }
 
   // ===== SENTENCE-LEVEL MATCHING =====
@@ -985,7 +1028,12 @@ class ArkaEngine {
     if (!text.trim()) return { translation: '', breakdown: [], sentenceMatch: null, pronunciation: '' };
 
     // Check sentence memory for exact/near match
-    const sentenceMatch = this.findSentenceMatch(text);
+    // Only use sentence memory for multi-word inputs (avoid interference with single words/greetings)
+    let sentenceMatch = null;
+    const wordCount = text.trim().split(/\s+/).length;
+    if (wordCount >= 4) {
+      sentenceMatch = this.findSentenceMatch(text);
+    }
 
     // Strip outer quotes before processing
     const cleanedText = text.replace(/["""'']/g, ' ').trim();
@@ -1196,6 +1244,57 @@ class ArkaEngine {
     };
   }
 
+  // === HIGH-PRIORITY JP→ARKA OVERRIDES ===
+  // Direct mappings verified against dictionary.
+  // Fixes homophone collisions, incorrect reverse-map entries, and common words.
+  static JP_ARKA_OVERRIDES = {
+    // --- Verbs (many collide with grammar words without overrides) ---
+    '行く': 'ke', '来る': 'luna', '見る': 'in',
+    '食べる': 'kui', '飲む': 'xen', '走る': 'lef', '歩く': 'luk',
+    '読む': 'isk', '書く': 'axt', '言う': 'ku', '話す': 'kul',
+    '聞く': 'ter', '知る': 'ser', '思う': 'lo', '考える': 'rafis',
+    '分かる': 'loki', '愛する': 'tiia', '生きる': 'ikn', '死ぬ': 'vort',
+    // --- Colors ---
+    '赤い': 'har', '赤': 'har', '白い': 'fir', '白': 'fir',
+    '黒い': 'ver', '黒': 'ver', '青い': 'soret', '青': 'soret',
+    '緑': 'diia',
+    // --- Adjectives ---
+    '大きい': 'kai', '小さい': 'lis', '美しい': 'fiiyu',
+    '良い': 'rat', '悪い': 'yam', '新しい': 'sam', '古い': 'sid',
+    '早い': 'foil', '遅い': 'demi', '速い': 'tax',
+    '強い': 'kanvi', '弱い': 'ivn', '高い': 'sor', '低い': 'hait',
+    '長い': 'fil', '短い': 'fen', '寒い': 'sort', '暑い': 'hart',
+    '熱い': 'hart', '冷たい': 'sort',
+    // --- Emotions ---
+    '好き': 'siina', '嫌い': 'sin', '怖い': 'vem',
+    '悲しい': 'emt', '嬉しい': 'nau', '寂しい': 'laap',
+    '楽しい': 'ban', '痛い': 'yai', '眠い': 'omo',
+    // --- People & Family ---
+    '人': 'lan', '男': 'vik', '女': 'min',
+    '子供': 'lazal', '先生': 'xanxa', '友達': 'hacn',
+    '父': 'kaan', '母': 'laal', '兄': 'alser', '姉': 'eeta',
+    '弟': 'aruuj', '妹': 'amel',
+    // --- Places & Nature ---
+    '学校': 'felka', '家': 'ra', '部屋': 'ez',
+    '空': 'jan', '山': 'wal', '海': 'tier', '川': 'erei',
+    '森': 'kalto', '木': 'zom', '道': 'font',
+    '花': 'miina', '猫': 'ket', '犬': 'kom',
+    // --- Time ---
+    '朝': 'faar', '夜': 'vird', '今日': 'fis',
+    '明日': 'kest', '昨日': 'toxel', '時間': 'miv',
+    // --- Things ---
+    '水': 'er', '雨': 'esk', '風': 'teeze',
+    '太陽': 'faal', '月': 'xelt', '星': 'liifa',
+    '本': 'lei', '手紙': 'hek', '名前': 'est',
+    '愛': 'tiia', '世界': 'fia',
+    // --- Body ---
+    '手': 'las', '目': 'ins', '耳': 'tem', '口': 'kuo',
+    '心': 'na', '頭': 'osn',
+    // --- Abstract ---
+    '声': 'xiv', '歌': 'miks', '夢': 'lond',
+    '光': 'far', '闇': 'vel', '命': 'livro', '死': 'vort',
+  };
+
   // --- Japanese → Arka Translation ---
   translateJapaneseToArka(text) {
     if (!text.trim()) return { translation: '', breakdown: [], isKansai: false, isSouthern: false, isPoetic: false, pronunciation: '' };
@@ -1319,24 +1418,75 @@ class ArkaEngine {
     if (!word || !word.trim()) return null;
     const cleaned = word.trim();
 
+    // === 1. Check override table first (highest priority) ===
+    if (ArkaEngine.JP_ARKA_OVERRIDES[cleaned]) {
+      const arkaWord = ArkaEngine.JP_ARKA_OVERRIDES[cleaned];
+      const entry = this.lookupArka(arkaWord);
+      return { arkaWord, entry: entry || { word: arkaWord, meaning: cleaned }, level: entry?.level || 1 };
+    }
+
+    // === 2. Try stripping verb/adj conjugation endings to match overrides ===
+    const CONJUGATION_ENDINGS = [
+      'される', 'させる', 'られる',  // passive/causative
+      'したい', 'くない', 'した', 'して',  // compound
+      'ない', 'ます', 'ません', 'です',  // polite
+      'する', 'い', 'な', 'く', 'た', 'て',  // basic
+    ];
+    for (const end of CONJUGATION_ENDINGS) {
+      if (cleaned.endsWith(end) && cleaned.length > end.length) {
+        const stem = cleaned.slice(0, -end.length);
+        if (ArkaEngine.JP_ARKA_OVERRIDES[stem]) {
+          const arkaWord = ArkaEngine.JP_ARKA_OVERRIDES[stem];
+          const entry = this.lookupArka(arkaWord);
+          return { arkaWord, entry: entry || { word: arkaWord, meaning: stem }, level: entry?.level || 1 };
+        }
+        // Also try stem + い (for adj), stem + る (for verb), stem + う (for verb)
+        for (const reattach of ['い', 'る', 'う', 'く', 'す']) {
+          const candidate = stem + reattach;
+          if (ArkaEngine.JP_ARKA_OVERRIDES[candidate]) {
+            const arkaWord = ArkaEngine.JP_ARKA_OVERRIDES[candidate];
+            const entry = this.lookupArka(arkaWord);
+            return { arkaWord, entry: entry || { word: arkaWord, meaning: candidate }, level: entry?.level || 1 };
+          }
+        }
+      }
+    }
+
+    // === 3. Direct reverse map lookup ===
     if (this.reverseMap.has(cleaned) && this.reverseMap.get(cleaned).length > 0) {
       return this.reverseMap.get(cleaned)[0];
     }
 
+    // === 4. Try stripping grammatical endings for reverse map ===
     const endings = ['する', 'い', 'な', 'く', 'た', 'て', 'に', 'を', 'は', 'が', 'の', 'で', 'も', 'へ', 'から', 'まで', 'より', 'ます', 'です', 'だ', 'である'];
     for (const end of endings) {
       if (cleaned.endsWith(end) && cleaned.length > end.length) {
         const stem = cleaned.slice(0, -end.length);
-        if (this.reverseMap.has(stem) && this.reverseMap.get(stem).length > 0) {
+        if (stem.length >= 2 && this.reverseMap.has(stem) && this.reverseMap.get(stem).length > 0) {
           return this.reverseMap.get(stem)[0];
         }
       }
     }
 
-    for (const [key, entries] of this.reverseMap) {
-      if (key.includes(cleaned) || cleaned.includes(key)) {
-        if (entries.length > 0) return entries[0];
+    // === 5. Fuzzy match (conservative) ===
+    if (cleaned.length >= 3) {
+      let bestMatch = null;
+      let bestScore = 0;
+      for (const [key, entries] of this.reverseMap) {
+        if (key.length < 2 || entries.length === 0) continue;
+        if (key === cleaned) return entries[0];
+        // Allow substring match only with high overlap
+        if (cleaned.length >= 3 && key.length >= 3) {
+          if (key.includes(cleaned) && cleaned.length >= key.length * 0.6) {
+            const score = cleaned.length / key.length;
+            if (score > bestScore) { bestScore = score; bestMatch = entries[0]; }
+          } else if (cleaned.includes(key) && key.length >= cleaned.length * 0.6) {
+            const score = key.length / cleaned.length;
+            if (score > bestScore) { bestScore = score; bestMatch = entries[0]; }
+          }
+        }
       }
+      if (bestMatch && bestScore >= 0.6) return bestMatch;
     }
 
     return null;
@@ -1364,6 +1514,10 @@ class ArkaEngine {
   }
 
   _splitJapaneseSegment(text) {
+    // Japanese particles to silently drop during tokenization
+    const PARTICLES_SET = new Set(['を', 'は', 'が', 'の', 'に', 'へ', 'で', 'と', 'も']);
+    const PARTICLES_MULTI = ['から', 'まで', 'より', 'など', 'けど', 'けれど'];
+    
     return text
       .split(/[\s、。！？!?,，.]+/)
       .filter(s => s.trim())
@@ -1371,19 +1525,118 @@ class ArkaEngine {
         const result = [];
         let remaining = s;
         while (remaining.length > 0) {
+          // First, skip standalone single-char particles at start
+          if (remaining.length === 1 && PARTICLES_SET.has(remaining)) {
+            remaining = '';
+            break;
+          }
+          // Check for multi-char particles at start
+          let particleSkipped = false;
+          for (const p of PARTICLES_MULTI) {
+            if (remaining.startsWith(p) && remaining.length === p.length) {
+              remaining = '';
+              particleSkipped = true;
+              break;
+            }
+          }
+          if (particleSkipped) break;
+
           let found = false;
-          for (let len = Math.min(remaining.length, 10); len >= 1; len--) {
+          // Try override table first (longest match)
+          for (let len = Math.min(remaining.length, 12); len >= 2; len--) {
             const candidate = remaining.slice(0, len);
+            // Check override table
+            if (ArkaEngine.JP_ARKA_OVERRIDES[candidate]) {
+              result.push(candidate);
+              remaining = remaining.slice(len);
+              found = true;
+              break;
+            }
+            // Check reverse map
             if (this.reverseMap.has(candidate)) {
               result.push(candidate);
               remaining = remaining.slice(len);
               found = true;
               break;
             }
+            // Try stripping trailing particle
+            for (const p of [...PARTICLES_SET]) {
+              if (candidate.endsWith(p) && candidate.length > p.length) {
+                const stem = candidate.slice(0, -p.length);
+                if (stem.length >= 2 && (ArkaEngine.JP_ARKA_OVERRIDES[stem] || this.reverseMap.has(stem))) {
+                  result.push(stem);
+                  remaining = remaining.slice(stem.length);
+                  // Skip the particle
+                  if (remaining.startsWith(p)) {
+                    remaining = remaining.slice(p.length);
+                  }
+                  found = true;
+                  break;
+                }
+              }
+            }
+            if (found) break;
+            // Try multi-char particles
+            for (const p of PARTICLES_MULTI) {
+              if (candidate.endsWith(p) && candidate.length > p.length) {
+                const stem = candidate.slice(0, -p.length);
+                if (stem.length >= 2 && (ArkaEngine.JP_ARKA_OVERRIDES[stem] || this.reverseMap.has(stem))) {
+                  result.push(stem);
+                  remaining = remaining.slice(stem.length);
+                  if (remaining.startsWith(p)) remaining = remaining.slice(p.length);
+                  found = true;
+                  break;
+                }
+              }
+            }
+            if (found) break;
           }
           if (!found) {
-            result.push(remaining[0]);
-            remaining = remaining.slice(1);
+            // Check if current char is a particle to skip
+            if (PARTICLES_SET.has(remaining[0])) {
+              remaining = remaining.slice(1);
+              continue;
+            }
+            // Collect consecutive unmatched characters as a single token
+            let unmatched = '';
+            while (remaining.length > 0) {
+              // When we hit a particle, flush unmatched and skip particle
+              if (PARTICLES_SET.has(remaining[0])) {
+                if (unmatched) {
+                  result.push(unmatched);
+                  unmatched = '';
+                }
+                remaining = remaining.slice(1);
+                continue;
+              }
+              // Check for multi-char particle
+              let multiSkipped = false;
+              for (const mp of PARTICLES_MULTI) {
+                if (remaining.startsWith(mp)) {
+                  if (unmatched) {
+                    result.push(unmatched);
+                    unmatched = '';
+                  }
+                  remaining = remaining.slice(mp.length);
+                  multiSkipped = true;
+                  break;
+                }
+              }
+              if (multiSkipped) continue;
+              
+              let canMatch = false;
+              for (let len = Math.min(remaining.length, 12); len >= 2; len--) {
+                const sub = remaining.slice(0, len);
+                if (ArkaEngine.JP_ARKA_OVERRIDES[sub] || this.reverseMap.has(sub)) {
+                  canMatch = true;
+                  break;
+                }
+              }
+              if (canMatch) break;
+              unmatched += remaining[0];
+              remaining = remaining.slice(1);
+            }
+            if (unmatched) result.push(unmatched);
           }
         }
         return result;
