@@ -1823,6 +1823,8 @@ class ArkaEngine {
     '虚しい': 'reyu', '孤独': 'laap', '深い': 'hol', '遠い': 'vosn',
     '近い': 'amis', '暗い': 'anje', '明るい': 'firte', '静か': 'poen',
     '激しい': 'vam', '優しい': 'noan', '残酷': 'ketet',
+    '綺麗': 'limi', '綺麗な': 'limi', 'きれい': 'limi', 'キレイ': 'limi',
+    '清潔': 'osk', '清潔な': 'osk',
     '静かに': 'seer', '穏やか': 'diina', '寂しい': 'laap',
     // --- Emotions ---
     '好き': 'siina', '嫌い': 'sin', '怖い': 'vem',
