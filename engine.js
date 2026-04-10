@@ -675,6 +675,29 @@ class ArkaEngine {
   static JP_ADJ_ENDINGS = ['い', 'しい', 'かった', 'くない'];
   static JP_COPULA = ['だ', 'です', 'である', 'でしょう', 'だった'];
 
+  // --- Shared constants ---
+  static MAX_JP_TOKEN_LEN = 12;           // Longest Japanese token to attempt matching
+  static MIN_SENTENCE_MATCH_WORDS = 4;    // Minimum words before attempting sentence memory match
+  static POETIC_SHORT_THRESHOLD = 20;     // Max char length for short-text poetic detection
+  static POETIC_KANJI_THRESHOLD = 15;     // Max char length for kanji-only poetic detection
+
+  // Verb endings used in copula detection to distinguish verbal vs nominal predicates
+  static JP_VERB_COMPOUND_ENDINGS = [
+    'する', 'した', 'して', 'しない', 'します', 'しません',
+    'れる', 'れた', 'れて', 'られる', 'られた',
+    'せる', 'させる',
+    'ている', 'ていた', 'ていない', 'ています', 'ておく',
+    'てある', 'てあった',
+    'える', 'おる', 'ある',
+    'いく', 'いった', 'くる', 'きた',
+  ];
+  static JP_VERB_DICT_ENDINGS = ['る', 'う', 'つ', 'く', 'ぐ', 'す', 'ぬ', 'ぶ', 'む'];
+  static JP_VERB_TA_ENDINGS = ['った', 'んだ', 'した', 'いた', 'いだ'];
+  static JP_VERB_TE_ENDINGS = ['って', 'んで', 'して', 'いて', 'いで'];
+  static JP_VERB_MASU_ENDINGS = ['ます', 'ません', 'ました', 'ませんでした'];
+  static JP_NEG_COPULA_PATTERNS = ['ではない', 'じゃない', 'ではありません', 'じゃありません', 'でない'];
+  static JP_COPULA_ENDINGS = ['だ', 'です', 'である', 'でした', 'でしょう', 'だった', 'だろう'];
+
   static inferSubject(text) {
     // Check if the sentence already has a subject marker
     for (const p of ArkaEngine.SUBJECT_PARTICLES) {
@@ -719,7 +742,7 @@ class ArkaEngine {
     }
 
     // Default: short sentences without subject → 1st person
-    if (text.length < 20 && !text.includes('は') && !text.includes('が')) {
+    if (text.length < ArkaEngine.POETIC_SHORT_THRESHOLD && !text.includes('は') && !text.includes('が')) {
       return { hasSubject: false, subject: 'an', reason: '短文(暗黙の一人称)' };
     }
 
@@ -737,7 +760,7 @@ class ArkaEngine {
     // Very short, no punctuation, AND contains literary kanji = likely poetic fragment
     // (Don't trigger on normal short sentences like greetings or simple statements)
     const literaryKanji = /[儚脆散朽枯滅彷徊魂翼闇光涙夢運命絶望希望永遠寒空]/;
-    if (text.length < 15 && !/[。、！？!?,.]/.test(text) && literaryKanji.test(text)) return true;
+    if (text.length < ArkaEngine.POETIC_KANJI_THRESHOLD && !/[。、！？!?,.]/.test(text) && literaryKanji.test(text)) return true;
     // Detect literary/poetic compound expressions (require STRONG signals)
     // Weak signals like ている/ていく alone are not enough — they appear in regular text
     const strongPoeticPatterns = /(にゆく|りゆく|えゆく|みゆく|ながら|つつ|のまま|のように|果てない|尽きない|終わりなき|儚い|脆く|散りゆく|朽ちていく|消えていく|枯れていく|崩れていく)/;
@@ -1038,7 +1061,7 @@ class ArkaEngine {
 
       // Greedy match: try longest possible word from overrides/reverseMap
       let found = false;
-      for (let len = Math.min(remaining.length, 12); len >= 1; len--) {
+      for (let len = Math.min(remaining.length, ArkaEngine.MAX_JP_TOKEN_LEN); len >= 1; len--) {
         const candidate = remaining.slice(0, len);
         // Strip trailing particles from candidate
         let stripped = candidate;
@@ -1065,7 +1088,7 @@ class ArkaEngine {
         // Keep collecting until we hit a particle or can match
         while (remaining.length > 0 && !PARTICLES.has(remaining[0])) {
           let canMatch = false;
-          for (let len = Math.min(remaining.length, 12); len >= 2; len--) {
+          for (let len = Math.min(remaining.length, ArkaEngine.MAX_JP_TOKEN_LEN); len >= 2; len--) {
             const sub = remaining.slice(0, len);
             if (ArkaEngine.JP_ARKA_OVERRIDES[sub] || this.reverseMap.has(sub)) {
               canMatch = true;
@@ -1407,7 +1430,7 @@ class ArkaEngine {
     // Only use sentence memory for multi-word inputs (avoid interference with single words/greetings)
     let sentenceMatch = null;
     const wordCount = text.trim().split(/\s+/).length;
-    if (wordCount >= 4) {
+    if (wordCount >= ArkaEngine.MIN_SENTENCE_MATCH_WORDS) {
       sentenceMatch = this.findSentenceMatch(text);
     }
 
@@ -1988,11 +2011,10 @@ class ArkaEngine {
     const predicate = text.slice(waIdx + 1).trim();
     if (!predicate) return null;
 
-    // Check for negative copula patterns first (ではない, じゃない)
-    const negPatterns = ['ではない', 'じゃない', 'ではありません', 'じゃありません', 'でない'];
+    // Check for negative copula patterns first
     let isNegative = false;
     let predicateCore = predicate;
-    for (const neg of negPatterns) {
+    for (const neg of ArkaEngine.JP_NEG_COPULA_PATTERNS) {
       if (predicate.endsWith(neg)) {
         isNegative = true;
         predicateCore = predicate.slice(0, -neg.length);
@@ -2001,33 +2023,9 @@ class ArkaEngine {
     }
 
     // Detect verb predicates — these do NOT get copula
-    // Verb endings that indicate the predicate is verbal
-    const verbEndings = [
-      'する', 'した', 'して', 'しない', 'します', 'しません',
-      'れる', 'れた', 'れて', 'られる', 'られた',
-      'せる', 'させる',
-      'ている', 'ていた', 'ていない', 'ています', 'ておく',
-      'てある', 'てあった',
-      'える', 'える', 'おる', 'ある',
-      'いく', 'いった', 'くる', 'きた',
-    ];
-    // Common verb dictionary form endings (context-dependent)
-    const verbDictEndings = ['る', 'う', 'つ', 'く', 'ぐ', 'す', 'ぬ', 'ぶ', 'む'];
-    const verbTaEndings = ['った', 'んだ', 'した', 'いた', 'いだ'];
-    const verbTeEndings = ['って', 'んで', 'して', 'いて', 'いで'];
-    const verbMasuEndings = ['ます', 'ません', 'ました', 'ませんでした'];
-
-    // Check explicit verb compound endings
-    for (const ve of verbEndings) {
-      if (predicate.endsWith(ve) && predicate.length > ve.length) {
-        return null; // It's a verb sentence, no copula needed
-      }
-    }
-    for (const ve of verbMasuEndings) {
-      if (predicate.endsWith(ve)) {
-        return null; // polite verb
-      }
-    }
+    const isVerbCompound = ArkaEngine.JP_VERB_COMPOUND_ENDINGS.some(ve => predicate.endsWith(ve) && predicate.length > ve.length);
+    const isVerbMasu = ArkaEngine.JP_VERB_MASU_ENDINGS.some(ve => predicate.endsWith(ve));
+    if (isVerbCompound || isVerbMasu) return null;
 
     // Detect i-adjective predicate (ends in い but NOT ない as standalone)
     // e.g., 美しい, 大きい, 赤い
@@ -2051,8 +2049,7 @@ class ArkaEngine {
     }
 
     // Detect na-adjective + copula (e.g., 静かだ, 綺麗です)
-    const copulaEndings = ['だ', 'です', 'である', 'でした', 'でしょう', 'だった', 'だろう'];
-    for (const cop of copulaEndings) {
+    for (const cop of ArkaEngine.JP_COPULA_ENDINGS) {
       if (predicate.endsWith(cop) && predicate.length > cop.length) {
         const nounOrAdj = predicate.slice(0, -cop.length);
         return { subject, predicate: nounOrAdj, copula: isNegative ? 'de' : 'et', type: 'noun-copula' };
@@ -2072,9 +2069,9 @@ class ArkaEngine {
 
     // If predicate is a noun (no verb endings, no adj endings) → copula sentence
     // Check for verb endings — verbs do not use copula
-    const hasVerbEnding = verbDictEndings.some(e => predicate.endsWith(e) && predicate.length >= 2);
-    const hasVerbTaEnding = verbTaEndings.some(e => predicate.endsWith(e));
-    const hasVerbTeEnding = verbTeEndings.some(e => predicate.endsWith(e));
+    const hasVerbEnding = ArkaEngine.JP_VERB_DICT_ENDINGS.some(e => predicate.endsWith(e) && predicate.length >= 2);
+    const hasVerbTaEnding = ArkaEngine.JP_VERB_TA_ENDINGS.some(e => predicate.endsWith(e));
+    const hasVerbTeEnding = ArkaEngine.JP_VERB_TE_ENDINGS.some(e => predicate.endsWith(e));
 
     if (hasVerbEnding || hasVerbTaEnding || hasVerbTeEnding) {
       // Likely a verb sentence — no copula needed
@@ -2339,7 +2336,7 @@ class ArkaEngine {
 
           let found = false;
           // Try override table first (longest match)
-          for (let len = Math.min(remaining.length, 12); len >= 2; len--) {
+          for (let len = Math.min(remaining.length, ArkaEngine.MAX_JP_TOKEN_LEN); len >= 2; len--) {
             const candidate = remaining.slice(0, len);
             // Check override table
             if (ArkaEngine.JP_ARKA_OVERRIDES[candidate]) {
@@ -2421,7 +2418,7 @@ class ArkaEngine {
               if (multiSkipped) continue;
               
               let canMatch = false;
-              for (let len = Math.min(remaining.length, 12); len >= 2; len--) {
+              for (let len = Math.min(remaining.length, ArkaEngine.MAX_JP_TOKEN_LEN); len >= 2; len--) {
                 const sub = remaining.slice(0, len);
                 if (ArkaEngine.JP_ARKA_OVERRIDES[sub] || this.reverseMap.has(sub)) {
                   canMatch = true;

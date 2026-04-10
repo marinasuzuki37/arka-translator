@@ -179,24 +179,6 @@
     }
   }
 
-  function showAILoading() {
-    // Add loading indicator below output
-    let aiSection = document.getElementById('ai-result-section');
-    if (!aiSection) {
-      aiSection = document.createElement('div');
-      aiSection.id = 'ai-result-section';
-      aiSection.className = 'ai-result-section';
-      outputText.parentNode.appendChild(aiSection);
-    }
-    aiSection.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span> AI翻訳を取得中…</div>';
-    aiSection.style.display = 'block';
-  }
-
-  function hideAILoading() {
-    const aiSection = document.getElementById('ai-result-section');
-    if (aiSection) aiSection.style.display = 'none';
-  }
-
   function getOrCreateAISection() {
     let aiSection = document.getElementById('ai-result-section');
     if (!aiSection) {
@@ -206,6 +188,17 @@
       outputText.parentNode.appendChild(aiSection);
     }
     return aiSection;
+  }
+
+  function showAILoading() {
+    const aiSection = getOrCreateAISection();
+    aiSection.innerHTML = '<div class="ai-loading"><span class="ai-spinner"></span> AI翻訳を取得中…</div>';
+    aiSection.style.display = 'block';
+  }
+
+  function hideAILoading() {
+    const aiSection = document.getElementById('ai-result-section');
+    if (aiSection) aiSection.style.display = 'none';
   }
 
   function appendAIError() {
