@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>幻訳 - アルカ語自動翻訳システム</title>
+  <meta name="description" content="人工言語アルカ(Arka)と日本語の双方向翻訳・辞書検索・文法リファレンス">
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=cabinet-grotesk@700,800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Loading overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <p class="loading-text">辞書データを読み込んでいます…</p>
+    </div>
+  </div>
+
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="logo-area">
+        <svg class="logo-icon" width="32" height="32" viewBox="0 0 32 32" fill="none" aria-label="幻訳ロゴ">
+          <rect x="2" y="2" width="28" height="28" rx="6" stroke="currentColor" stroke-width="2"/>
+          <path d="M8 16h16M16 8v16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="10" cy="10" r="2" fill="currentColor" opacity="0.6"/>
+          <circle cx="22" cy="22" r="2" fill="currentColor" opacity="0.6"/>
+          <circle cx="22" cy="10" r="2" fill="currentColor" opacity="0.3"/>
+          <circle cx="10" cy="22" r="2" fill="currentColor" opacity="0.3"/>
+        </svg>
+        <div>
+          <h1 class="logo-title">幻訳</h1>
+          <p class="logo-subtitle">アルカ語自動翻訳システム</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="dict-count" id="dict-count"></span>
+        <button data-theme-toggle aria-label="テーマ切替">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tab-nav">
+    <div class="tab-nav-inner">
+      <button class="tab-btn active" data-tab="translate">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1"/><path d="m22 22-5-10-5 10M14 18h6"/></svg>
+        翻訳
+      </button>
+      <button class="tab-btn" data-tab="dictionary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+        辞書
+      </button>
+      <button class="tab-btn" data-tab="grammar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+        文法
+      </button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <!-- TRANSLATE TAB -->
+    <section id="tab-translate" class="tab-panel active">
+      <div class="direction-bar">
+        <span class="lang-label" id="source-lang">アルカ語</span>
+        <button class="swap-btn" id="swap-direction" aria-label="翻訳方向を切り替え">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+        </button>
+        <span class="lang-label" id="target-lang">日本語</span>
+      </div>
+
+      <div class="translate-panels">
+        <div class="panel input-panel">
+          <div class="panel-header">
+            <label for="input-text">入力</label>
+            <button class="clear-btn" id="clear-input" aria-label="クリア">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <textarea id="input-text" placeholder="ここにテキストを入力…" rows="6" spellcheck="false"></textarea>
+          <div class="panel-footer">
+            <button class="translate-btn" id="translate-btn">翻訳する</button>
+          </div>
+        </div>
+
+        <div class="panel output-panel">
+          <div class="panel-header">
+            <label>出力</label>
+            <button class="copy-btn" id="copy-output" aria-label="コピー">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+          </div>
+          <div class="output-area" id="output-text">
+            <span class="placeholder-text">翻訳結果がここに表示されます</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Word breakdown -->
+      <div class="breakdown-section" id="breakdown-section" style="display:none;">
+        <h3 class="breakdown-title">語句解析</h3>
+        <div class="breakdown-grid" id="breakdown-grid"></div>
+      </div>
+    </section>
+
+    <!-- DICTIONARY TAB -->
+    <section id="tab-dictionary" class="tab-panel">
+      <div class="dict-search-bar">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="dict-search" placeholder="アルカ語または日本語で検索…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="search-filters">
+          <select id="dict-level-filter">
+            <option value="all">全レベル</option>
+            <option value="1">★ レベル1 (基礎)</option>
+            <option value="2">★★ レベル2</option>
+            <option value="3">★★★ レベル3</option>
+            <option value="4">★★★★ レベル4</option>
+            <option value="5">★★★★★ レベル5</option>
+          </select>
+          <select id="dict-pos-filter">
+            <option value="all">全品詞</option>
+            <option value="名詞">名詞</option>
+            <option value="動詞">動詞</option>
+            <option value="形副詞">形副詞</option>
+            <option value="純詞">純詞</option>
+            <option value="格詞">格詞</option>
+            <option value="接続詞">接続詞</option>
+            <option value="感動詞">感動詞</option>
+          </select>
+        </div>
+      </div>
+      <div class="dict-results-info" id="dict-results-info"></div>
+      <div class="dict-results" id="dict-results"></div>
+    </section>
+
+    <!-- GRAMMAR TAB -->
+    <section id="tab-grammar" class="tab-panel">
+      <div class="grammar-content" id="grammar-content"></div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>幻訳 — 人工言語アルカの自動翻訳システム</p>
+  </footer>
+
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
