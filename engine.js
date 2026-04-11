@@ -2088,6 +2088,14 @@ class ArkaEngine {
     '三時': 'viosn miv',
     '来週': 'kest ven',
 
+    // --- Round 7: Compound words & wish expressions ---
+    '長生き': 'fil ikn', '長生きする': 'fil ikn', '長生きして': 'fil ikn',
+    '長生きしてほしい': 'lax fil ikn', '長生きしてください': 'fil ikn ret',
+    'してほしい': 'lax', 'てほしい': 'lax', 'ほしい': 'lax',
+    'してほしくない': 'lax en', 'てほしくない': 'lax en',
+    'してもらいたい': 'sant', 'てもらいたい': 'sant',
+    '幸せ': 'nil', '幸せな': 'nil', '幸福': 'nil', '不幸': 'nels', '不幸な': 'nels',
+    '幸せになってほしい': 'lax nil', '幸せになる': 'nil',
     // --- Round 7: Verb stem fragments (after GRAMMAR_SUFFIXES stripping) ---
     '食べ': 'kui', '食べられ': 'kui', '食べられない': 'kui en',
     '降っ': 'ar', '行': 'ke', '行き': 'ke', '行った': 'ke',
@@ -3589,6 +3597,12 @@ class ArkaEngine {
     // e.g., 死んではいけない, 食べてはいけない, 行ってはいけない
     const beforeWa = text[waIdx - 1];
     if (beforeWa === 'て' || beforeWa === 'で') return null;
+
+    // には/とは — the は is an emphatic particle, NOT a topic copula marker
+    // e.g., あなたには長生きしてほしい, 東京には行きたい, 彼とは会いたくない
+    if (beforeWa === 'に' || beforeWa === 'と') return null;
+    // からは — multi-char check (can't just check か, as that could be 馬鹿は etc.)
+    if (waIdx >= 2 && text.slice(waIdx - 2, waIdx) === 'から') return null;
 
     // Verify は is preceded by content (not part of a word like はし)
     // Also allow __PRONOUN_xxx__ tokens (from nuance preprocessing)
