@@ -3336,6 +3336,15 @@ class ArkaEngine {
     '閉じて': 'deyu',            // close (te-form)
     '閉じる': 'deyu',            // close
     '開けろ': 'ponz',            // open (imperative)
+    '教えて': 'xax',             // teach/tell (te-form)
+    '教えろ': 'xax',             // teach (imperative)
+    '教えなさい': 'xax',         // teach (polite imperative)
+    '教える': 'xax',             // teach
+    '助けて': 'alk',             // help (te-form)
+    '助けろ': 'alk',             // help (imperative)
+    '助ける': 'alk',             // help
+    '伝えて': 'okt',             // convey (te-form)
+    '伝える': 'okt',             // convey
 
     // === Round 5: Missing vocabulary ===
     '望み': 'lax',               // hope/wish
