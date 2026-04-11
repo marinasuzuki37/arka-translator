@@ -549,21 +549,32 @@ class ArkaEngine {
   };
 
   // Aspect suffixes (checked on unknown words)
+  // Full forms + open-syllable contracted forms (開音節では短縮形)
   static ASPECT_SUFFIXES = [
     { suffix: 'and', meaning: '反復', jp: '～し続ける' },
+    { suffix: 'ok', meaning: '完了', jp: '～した' },
     { suffix: 'or', meaning: '経過', jp: '～している' },
     { suffix: 'ik', meaning: '完了', jp: '～した' },
+    { suffix: 'ek', meaning: '完了', jp: '～した' },
+    { suffix: 'ak', meaning: '完了', jp: '～した' },
     { suffix: 'es', meaning: '継続', jp: '～している/～してある' },
-    { suffix: 'at', meaning: '過去', jp: '～した' }
+    { suffix: 'at', meaning: '過去', jp: '～した' },
+    { suffix: 'nd', meaning: '反復', jp: '～し続ける' },
+    { suffix: 'k', meaning: '完了', jp: '～した' },
+    { suffix: 't', meaning: '過去', jp: '～した' },
+    { suffix: 'r', meaning: '経過', jp: '～している' },
+    { suffix: 's', meaning: '継続', jp: '～している/～してある' }
   ];
 
   // Derivational suffixes (動副詞, 分詞, etc.)
   static DERIVATIONAL_SUFFIXES = [
+    { suffix: 'anel', meaning: '主格動副詞', jp: '～しながら' },
+    { suffix: 'astel', meaning: '再帰動副詞', jp: '～しつつ' },
     { suffix: 'el', meaning: '動副詞', jp: '～して/～く/～に(副詞的)' },
+    { suffix: 'en', meaning: '形容詞化', jp: '～な/～の' },
     { suffix: 'an', meaning: '主格分詞', jp: '～する者/～した者' },
     { suffix: 'ol', meaning: '対格分詞', jp: '～されるもの' },
-    { suffix: 'anel', meaning: '主格動副詞', jp: '～しながら' },
-    { suffix: 'astel', meaning: '再帰動副詞', jp: '～しつつ' }
+    { suffix: 'n', meaning: '属格/形容詞化', jp: '～の' },
   ];
 
   // Numbers
@@ -1457,6 +1468,9 @@ class ArkaEngine {
     for (const suf of ALL_SUFFIXES) {
       if (lower.endsWith(suf.suffix) && lower.length > suf.suffix.length + 1) {
         const stem = lower.slice(0, -suf.suffix.length);
+        // For single-letter suffixes (k,t,r,s), require stem is at least 2 chars
+        // and stem ends in vowel (open syllable rule)
+        if (suf.suffix.length === 1 && (stem.length < 2 || !/[aeiou]$/.test(stem))) continue;
         entry = this.lookupArka(stem);
         if (entry) {
           result.root = stem;
@@ -1525,6 +1539,194 @@ class ArkaEngine {
         result.prefixes.push({ form: 'mi', label: 'お～(敬語)' });
         result.meaning = 'お' + this._extractCoreMeaning(entry.meaning);
         return result;
+      }
+    }
+
+    // --- Punctuation & formatting artifacts ---
+    if (/^[>)<\/`_+:;\[\]{}|~^]+$/.test(token) || /^[A-Z]{1,2}[,.]?$/.test(token) || /^\d+[,.]\d+$/.test(token)) {
+      result.type = 'word';
+      result.meaning = token; // Keep as-is (formatting)
+      return result;
+    }
+
+    // --- Novel-specific: interjections & onomatopoeia ---
+    const NOVEL_INTERJECTIONS = {
+      'qm': 'うーん', 'qmm': 'うーん', 'qp': 'えっ', 'hqn': 'ふん',
+      'hqmm': 'ふーん', 'hmhm': 'ふむふむ', 'ah': 'あぁ', 'agg': 'あぐ',
+      'uuua': 'うぁぁ', 'eee': 'えぇぇ', 'aaa': 'あぁぁ', 'aaaa': 'あぁぁぁ',
+      'uuu': 'うぅぅ', 'no': 'ノー', 'y': 'イ', 'w': 'ウ',
+      'ep': 'えっ', 'va': 'わぁ',
+    };
+    if (NOVEL_INTERJECTIONS[lower]) {
+      result.type = 'word';
+      result.meaning = NOVEL_INTERJECTIONS[lower];
+      return result;
+    }
+    // Extended interjections: repeated vowels/consonants pattern
+    if (/^[aeou]{3,}$/.test(lower) || /^[a-z]+(aaa|eee|ooo|uuu)+[a-z]*$/i.test(lower)) {
+      result.type = 'word';
+      result.meaning = token; // Keep as-is (emotional exclamation)
+      return result;
+    }
+
+    // --- Elongated word normalization (kasmiiin→kasmi, teeeo→teo, sooono→sono) ---
+    const deElongated = lower.replace(/([a-z])\1{2,}/g, '$1$1');
+    if (deElongated !== lower) {
+      // Try all reduction levels: triple→double, then double→single
+      const reductions = [deElongated, lower.replace(/([a-z])\1+/g, '$1')];
+      // Also try removing just last elongated char (kasmiiin→kasmiin→kasmi)
+      for (const reduced of reductions) {
+        entry = this.lookupArka(reduced);
+        if (entry) {
+          result.root = reduced;
+          result.entry = entry;
+          result.type = 'word';
+          result.meaning = this._extractCoreMeaning(entry.meaning);
+          return result;
+        }
+        // Try suffix stripping on reduced form
+        for (const suf of ALL_SUFFIXES) {
+          if (reduced.endsWith(suf.suffix) && reduced.length > suf.suffix.length + 1) {
+            const stem = reduced.slice(0, -suf.suffix.length);
+            if (suf.suffix.length === 1 && (stem.length < 2 || !/[aeiou]$/.test(stem))) continue;
+            entry = this.lookupArka(stem);
+            if (entry) {
+              result.root = stem;
+              result.entry = entry;
+              result.type = 'word';
+              result.suffixes.push({ form: suf.suffix, label: suf.meaning, jp: suf.jp });
+              result.meaning = this._extractCoreMeaning(entry.meaning) + suf.jp;
+              return result;
+            }
+          }
+        }
+      }
+    }
+
+    // --- yan conjunction suffix (name + yan = name + そして) ---
+    if (lower.endsWith('yan') && lower.length > 4) {
+      const nameStem = lower.slice(0, -3);
+      // Check if it's a proper name (in wordMap) or known word
+      entry = this.lookupArka(nameStem);
+      if (entry) {
+        result.root = nameStem;
+        result.entry = entry;
+        result.type = 'word';
+        result.suffixes.push({ form: 'yan', label: 'そして', jp: 'そして' });
+        result.meaning = this._extractCoreMeaning(entry.meaning) + '、そして';
+        return result;
+      }
+      // Proper names may not be in dictionary but are capitalized
+      if (/^[A-Z]/.test(token)) {
+        result.type = 'word';
+        result.meaning = token.slice(0, -3) + '、そして';
+        return result;
+      }
+    }
+
+    // --- Dash-separated fragments (--aal, lets--, ve--soda, xi--xixixian etc.) ---
+    if (lower.includes('-')) {
+      // Strip leading/trailing dashes
+      const dashStripped = lower.replace(/^-+|-+$/g, '');
+      if (dashStripped !== lower && dashStripped.length >= 2) {
+        entry = this.lookupArka(dashStripped);
+        if (entry) {
+          result.root = dashStripped;
+          result.entry = entry;
+          result.type = 'word';
+          result.meaning = this._extractCoreMeaning(entry.meaning);
+          return result;
+        }
+      }
+      // Split on embedded dashes and try to resolve parts
+      const dashParts = lower.split(/--+/).filter(p => p.length >= 2);
+      if (dashParts.length >= 1) {
+        const meanings = [];
+        let allResolved = true;
+        for (const dp of dashParts) {
+          entry = this.lookupArka(dp);
+          if (entry) {
+            meanings.push(this._extractCoreMeaning(entry.meaning));
+          } else {
+            allResolved = false;
+            meanings.push(dp);
+          }
+        }
+        if (meanings.length > 0) {
+          result.type = 'word';
+          result.meaning = meanings.join('…');
+          return result;
+        }
+      }
+    }
+
+    // --- Compound prefix: kei- (chase), fax- (voice/sound) ---
+    const EXTRA_COMPOUND_PREFIXES = [
+      { prefix: 'kei', meaning: '追い' },
+      { prefix: 'fax', meaning: '声/音' },
+      { prefix: 'vax', meaning: '身体' },
+      { prefix: 'lan', meaning: '言葉/名' },
+      { prefix: 'fit', meaning: '強い' },
+      { prefix: 'vast', meaning: '大きい' },
+    ];
+    for (const pfx of EXTRA_COMPOUND_PREFIXES) {
+      if (lower.startsWith(pfx.prefix) && lower.length > pfx.prefix.length + 1) {
+        const stem = lower.slice(pfx.prefix.length);
+        entry = this.lookupArka(stem);
+        if (entry) {
+          result.root = stem;
+          result.entry = entry;
+          result.type = 'word';
+          result.prefixes.push({ form: pfx.prefix, label: pfx.meaning });
+          result.meaning = pfx.meaning + this._extractCoreMeaning(entry.meaning);
+          return result;
+        }
+        // Also try with suffix stripping on the stem
+        for (const suf of ArkaEngine.ASPECT_SUFFIXES) {
+          if (stem.endsWith(suf.suffix) && stem.length > suf.suffix.length + 1) {
+            const innerStem = stem.slice(0, -suf.suffix.length);
+            if (suf.suffix.length === 1 && (innerStem.length < 2 || !/[aeiou]$/.test(innerStem))) continue;
+            const innerEntry = this.lookupArka(innerStem);
+            if (innerEntry) {
+              result.root = innerStem;
+              result.entry = innerEntry;
+              result.type = 'word';
+              result.prefixes.push({ form: pfx.prefix, label: pfx.meaning });
+              result.suffixes.push({ form: suf.suffix, label: suf.meaning, jp: suf.jp });
+              result.meaning = pfx.meaning + this._extractCoreMeaning(innerEntry.meaning) + suf.jp;
+              return result;
+            }
+          }
+        }
+      }
+    }
+
+    // --- Parenthesized fragments like (arte, (tee, mark) etc. ---
+    const parenStripped = lower.replace(/^[()]+|[()]+$/g, '');
+    if (parenStripped !== lower && parenStripped.length >= 2) {
+      entry = this.lookupArka(parenStripped);
+      if (entry) {
+        result.root = parenStripped;
+        result.entry = entry;
+        result.type = 'word';
+        result.meaning = this._extractCoreMeaning(entry.meaning);
+        return result;
+      }
+    }
+
+    // --- Try splitting unknown word into known sub-words (PDF concat artifacts) ---
+    if (lower.length >= 4) {
+      for (let i = 2; i <= lower.length - 2; i++) {
+        const left = lower.slice(0, i);
+        const right = lower.slice(i);
+        const leftEntry = this.lookupArka(left);
+        const rightEntry = this.lookupArka(right);
+        if (leftEntry && rightEntry) {
+          result.type = 'word';
+          result.meaning = this._extractCoreMeaning(leftEntry.meaning) + ' ' + this._extractCoreMeaning(rightEntry.meaning);
+          result.root = left + '+' + right;
+          return result;
+        }
       }
     }
 
