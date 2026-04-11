@@ -919,8 +919,12 @@ class ArkaEngine {
     }
 
     // Detect sentence type for implicit subject inference
-    // Commands → 2nd person (ti)
-    if (/^[してくださいなさいろ]/.test(text) || text.endsWith('しろ') || text.endsWith('してください') || text.endsWith('しなさい') || text.endsWith('して')) {
+    // Commands/requests → 2nd person (ti)
+    // 〜てください, 〜しなさい, 〜しろ, 〜してくれ, 〜して, 〜ろ, 〜な etc.
+    // Imperative: 〜てください, 〜なさい, 一段〜ろ, 来い, 〜てくれ
+    // Note: 五段命令 (走れ,止まれ,聞け) has too many false positives for short text.
+    // Use てください/なさい/ろ/てくれ as reliable command indicators.
+    if (/(てください|てくれ|なさい|たまえ|てもらえる)$/.test(text) || /[きべめせけてねしぎりびみにいち]ろ$/.test(text) || /来い$/.test(text) || /^(して|しろ|しなさい|やめ)/.test(text)) {
       return { hasSubject: false, subject: 'ti', reason: '命令文(暗黙の二人称)' };
     }
 
@@ -2446,7 +2450,7 @@ class ArkaEngine {
     '食べる': 'kui',         // kui=食べる
     '飲む': 'xen',           // xen=飲む
     '見る': 'in',            // in=見る
-    '来る': 'kal',           // kal=来る
+    '来る': 'luna',          // luna=来る
     '行く': 'ke',            // ke=行く
     '子供': 'lazal',
     '学生': 'felan',
@@ -2468,7 +2472,7 @@ class ArkaEngine {
     '終わって': 'is',        // is=終わる
     '渡して': 'sef',
     '休んで': 'nian',
-    '来て': 'kal',
+    '来て': 'luna',
     '行って': 'ke',
     '見て': 'in',
     '食べて': 'kui',
@@ -2675,8 +2679,8 @@ class ArkaEngine {
     '引く': 'lef',            // lef=引く
     '引いて': 'lef',
     '引いていく': 'lef',
-    '打ち寄せる': 'kal',   // 打ち寄せる→来る(近似)
-    '打ち寄せて': 'kal',
+    '打ち寄せる': 'luna',  // 打ち寄せる→来る(近似)
+    '打ち寄せて': 'luna',
     '寄せて': 'xem',
     '砕ける': 'rig',
     '砕け': 'rig',
@@ -2706,9 +2710,9 @@ class ArkaEngine {
     'いただければ': 'sentant',
     'いただけますでしょうか': 'sentant',
     'いただき': 'sentant',
-    'お越し': 'kal',        // お越しいただき
+    'お越し': 'luna',       // お越しいただき (come)
     'いただいた': '',    // polite helper→drop
-    'ください': 'sentant', // please
+    'ください': 'ret',     // please (request: 〜してください)
     'くださいますよう': 'sentant',
     'おかけ': 'vant',       // trouble (apology context)
     '先ほど': 'ses',        // earlier/just now
@@ -2787,8 +2791,8 @@ class ArkaEngine {
     '行きたい': 'ke',
     '帰るわ': 'kolt',          // going home (emphatic)
     '帰る': 'kolt',
-    'できる': 'kal',           // can do
-    'できるか': 'kal',
+    'できる': '',              // can do → drop (grammar auxiliary)
+    'できるか': '',             // can do? → drop
     'してくれ': '',             // auxiliary → drop
     'してしまった': '',         // auxiliary (regret) → drop
     'してしまう': '',
@@ -2946,7 +2950,7 @@ class ArkaEngine {
     '立ち止まった': 'mono',
     '立ち': 'xtam',            // stand
     'いった': 'ke',            // went
-    'きた': 'kal',             // came
+    'きた': 'luna',            // came
     'すべてが': 'ilm',
     
     // --- More common words appearing in failures ---
@@ -2969,7 +2973,7 @@ class ArkaEngine {
     'おい': '',                 // hey/interjection → drop
     'する': '',                 // do → drop (auxiliary)
     'いく': 'ke',              // go (auxiliary)
-    'くる': 'kal',             // come (auxiliary)
+    'くる': 'luna',            // come (auxiliary)
     
     // --- More Kansai post-normalization ---
     'すぐ': 'foil',           // immediately → fast
@@ -3026,9 +3030,9 @@ class ArkaEngine {
     '思い出す': 'mal',         // remember → memory
     '思い出せ': 'mal',
     '思い出す事': 'mal vis',
-    '出来る': 'kal',           // can do → come
-    '出来た': 'kal',
-    '出来': 'kal',
+    '出来る': '',              // can do → drop (grammar auxiliary)
+    '出来た': '',              // could do → drop
+    '出来': '',               // can do → drop
     '出': 'leev',              // go out
     'どうして': 'ti',          // why → ti
     'どうしても': 'yuu',       // no matter what → completely
@@ -3192,11 +3196,11 @@ class ArkaEngine {
     'くれないかな': '',          // won't you → drop
     'もらえないかな': '',
     'できるかのかな': '',
-    'できるか': 'kal',           // can do?
-    'きる': 'kal',               // abbreviation of できる
+    'できるか': '',              // can do? → drop (grammar)
+    'きる': '',                  // abbreviation of できる → drop
     // Specific: お客様 compound
     'お客様': 'lan',
-    '来': 'kal',               // 来る (kanji-only) → come
+    '来': 'luna',              // 来る (kanji-only) → come
     'お客': 'lan',             // customer
 
     // === Round 4: Verb desire/obligation conjugation forms ===
@@ -3279,6 +3283,35 @@ class ArkaEngine {
     '死ぬ': 'vort',             // die
     '死んだ': 'vort',           // died
     '死んで': 'vort',           // dying (te-form)
+
+    // === Round 5: Imperative/te-form verb conjugations ===
+    '起きて': 'net',             // wake up (te-form)
+    '起きろ': 'net',             // wake up (imperative)
+    '起きなさい': 'net',         // wake up (polite imperative)
+    '起きてくれ': 'net',         // wake up (request)
+    '寝て': 'mok',               // sleep (te-form)
+    '寝ろ': 'mok',               // sleep (imperative)
+    '寝なさい': 'mok',           // sleep (polite imperative)
+    '聞いて': 'ter',             // listen (te-form)
+    '聞け': 'ter',               // listen (imperative)
+    '聞きなさい': 'ter',         // listen (polite imperative)
+    '見ろ': 'in',                // look (imperative)
+    '見なさい': 'in',            // look (polite imperative)
+    '食べろ': 'kui',             // eat (imperative)
+    '食べなさい': 'kui',         // eat (polite imperative)
+    '来い': 'luna',              // come (imperative)
+    '来なさい': 'luna',          // come (polite imperative)
+    '走れ': 'lef',               // run (imperative)
+    '走って': 'lef',             // run (te-form)
+    '止まれ': 'mono',            // stop (imperative)
+    '止まって': 'mono',          // stop (te-form)
+    '止まる': 'mono',            // stop
+    '閉めて': 'deyu',            // close (te-form)
+    '閉めろ': 'deyu',            // close (imperative)
+    '閉める': 'deyu',            // close
+    '閉じて': 'deyu',            // close (te-form)
+    '閉じる': 'deyu',            // close
+    '開けろ': 'ponz',            // open (imperative)
 
     // === Round 5: Missing vocabulary ===
     '望み': 'lax',               // hope/wish
@@ -3924,10 +3957,11 @@ class ArkaEngine {
     const cleaned = word.trim();
 
     // === 1. Check override table first (highest priority) ===
-    if (ArkaEngine.JP_ARKA_OVERRIDES[cleaned]) {
+    // Note: empty string '' means "drop this token" — must use hasOwnProperty to catch it
+    if (ArkaEngine.JP_ARKA_OVERRIDES.hasOwnProperty(cleaned)) {
       const arkaWord = ArkaEngine.JP_ARKA_OVERRIDES[cleaned];
-      const entry = this.lookupArka(arkaWord);
-      return { arkaWord, entry: entry || { word: arkaWord, meaning: cleaned }, level: entry?.level || 1 };
+      const entry = arkaWord ? this.lookupArka(arkaWord) : null;
+      return { arkaWord, entry: entry || (arkaWord ? { word: arkaWord, meaning: cleaned } : null), level: entry?.level || 1 };
     }
 
     // === 1b. Strip お/ご honorific prefixes and retry ===
