@@ -1943,6 +1943,12 @@ class ArkaEngine {
     '輝かせる': 'flip',  // FIX: far→flip
     '放浪する': 'flas', '漂う': 'sens', '迷う': 'reiz',
     '怒る': 'jo',        // NEW: 怒る
+    '演説': 'klak', '演説する': 'klak',   // speech
+    '決断': 'tyur', '決断する': 'tyur',   // decision
+    '決定': 'jal', '決める': 'jal',           // decide
+    '宣言': 'pran', '宣言する': 'pran',   // declare
+    '発表': 'nond', '発表する': 'nond',   // announce
+    '命令': 'vier', '命令する': 'vier',   // order/command
     '許す': 'xilhi',     // NEW: 許す、赦す
     '赦す': 'xilhi',
     '泳ぐ': 'loks',      // NEW: 泳ぐ
@@ -1989,6 +1995,24 @@ class ArkaEngine {
     '父': 'kaan', '母': 'laal', '兄': 'alser', '姉': 'eeta',
     '弟': 'aruuj', '妹': 'amel',
     '学生': 'felan',      // NEW: 学生
+    // --- Politics & Society ---
+    '首相': 'israfel', '総理': 'israfel', '総理大臣': 'israfel',
+    '大臣': 'losi', '大統領': 'txal', '元首': 'txal',
+    '政治家': 'velsan', '官僚': 'dalt',
+    '議員': 'veisan', '国会議員': 'veisan',
+    '国会': 'oznal', '議会': 'veis', '内閣': 'siat',
+    '政府': 'moel', '選挙': 'jivel', '投票': 'zim',
+    '法律': 'kaxu', '裁判': 'haik', '裁判所': 'haika',
+    '警察': 'nain', '警察官': 'nainan',
+    '王': 'daiz', '女王': 'istir', '皇帝': 'ilkant', '天皇': 'ilkant',
+    '将軍': 'hyuxa', '貴族': 'milan', '奴隷': 'klan',
+    '市民': 'leem', '国民': 'kadan', '大衆': 'selan', '民衆': 'selan',
+    '革命': 'izm', '外交': 'lava', '外交官': 'lavan',
+    '国': 'kad', '国家': 'kad', '政治': 'vels',
+    '権力': 'lagel', '主権': 'veslagel', '自由': 'silt',
+    '民主主義': 'minal', '独裁': 'veskolm',
+    '宰相': 'israfel', '摂政': 'vanort', '関白': 'saloant',
+    '弁護士': 'dankan', '福祉': 'gelp',
     // --- Places & Nature ---
     '学校': 'felka', '家': 'ra', '部屋': 'ez',
     '空': 'jan', '山': 'wal', '海': 'tier', '川': 'erei',
@@ -2026,7 +2050,7 @@ class ArkaEngine {
     '料理': 'bel',        // NEW: 料理
     // --- Fantasy & Mythology ---
     '剣': 'xado',
-    '王': 'ald',          // FIX: eeld→ald(王の一般的表現)
+    '王': 'daiz',          // FIX: daiz=王,君主,キング
     '姫': 'hime',         // NEW: 姫
     '城': 'nalt',         // NEW: 城
     '神': 'alies',        // NEW: 神
