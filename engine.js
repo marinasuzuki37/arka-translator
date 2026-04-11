@@ -924,7 +924,9 @@ class ArkaEngine {
     // Imperative: 〜てください, 〜なさい, 一段〜ろ, 来い, 〜てくれ
     // Note: 五段命令 (走れ,止まれ,聞け) has too many false positives for short text.
     // Use てください/なさい/ろ/てくれ as reliable command indicators.
-    if (/(てください|てくれ|なさい|たまえ|てもらえる)$/.test(text) || /[きべめせけてねしぎりびみにいち]ろ$/.test(text) || /来い$/.test(text) || /^(して|しろ|しなさい|やめ)/.test(text)) {
+    // Strip trailing punctuation for command detection
+    const cmdText = text.replace(/[。！？!?\.\s]+$/g, '');
+    if (/(てください|てくれ|なさい|たまえ|てもらえる|ないで|ないでください|ないでほしい|ないでくれ)$/.test(cmdText) || /[きべめせけてねしぎりびみにいち]ろ$/.test(cmdText) || /来い$/.test(cmdText) || /^(して|しろ|しなさい|やめ)/.test(cmdText) || /[ぬくすつむぶぐるえ]な$/.test(cmdText)) {
       return { hasSubject: false, subject: 'ti', reason: '命令文(暗黙の二人称)' };
     }
 
@@ -3307,6 +3309,31 @@ class ArkaEngine {
     '死ぬ': 'vort',             // die
     '死んだ': 'vort',           // died
     '死んで': 'vort',           // dying (te-form)
+    // === Round 5.5: 禁止形 (〜ないで / 〜な) ===
+    '死なないで': 'fon vort',       // don't die (negative request)
+    '死なないでください': 'fon vort', // please don't die
+    '死なないでほしい': 'fon vort', // I want you not to die
+    '死なないでくれ': 'fon vort',   // don't die (casual request)
+    '死ぬな': 'den vort',           // don't die! (imperative prohibition)
+    '行かないで': 'fon ke',         // don't go
+    '行かないでください': 'fon ke', // please don't go
+    '行くな': 'den ke',             // don't go! (prohibition)
+    '泣かないで': 'fon ena',        // don't cry
+    '泣かないでください': 'fon ena', // please don't cry
+    '泣くな': 'den ena',             // don't cry! (prohibition)
+    '忘れないで': 'fon kel',        // don't forget
+    '忘れないでください': 'fon kel', // please don't forget
+    '忘れるな': 'den kel',         // don't forget! (prohibition)
+    'やめないで': 'fon daim',       // don't stop/quit
+    'やめるな': 'den daim',           // don't stop! (prohibition)
+    '諦めないで': 'fon vina',       // don't give up
+    '諦めるな': 'den vina',           // don't give up! (prohibition)
+    '捨てないで': 'fon vins',       // don't throw away
+    '壊さないで': 'fon rig',        // don't break
+    '離れないで': 'fon leev',       // don't leave
+    '離れないでください': 'fon leev', // please don't leave
+    '逃げないで': 'fon elf',        // don't run away
+    '逃げるな': 'den elf',           // don't run away! (prohibition)
 
     // === Round 5: Imperative/te-form verb conjugations ===
     '起きて': 'net',             // wake up (te-form)
@@ -4169,9 +4196,13 @@ class ArkaEngine {
       .flatMap(s => {
         // Pre-process: strip trailing sentence-final particles
         let cleaned = s;
-        // Strip trailing final particles (e.g. よ, ね, わ, か, な at end)
-        while (cleaned.length > 1 && FINAL_PARTICLES.has(cleaned[cleaned.length - 1])) {
-          cleaned = cleaned.slice(0, -1);
+        // FIRST: check if the full segment matches an override BEFORE stripping
+        // This protects prohibition forms like 死ぬな, 行くな, 逃げるな where な = prohibition (not particle)
+        if (!ArkaEngine.JP_ARKA_OVERRIDES.hasOwnProperty(cleaned)) {
+          // Strip trailing final particles (e.g. よ, ね, わ, か, な at end)
+          while (cleaned.length > 1 && FINAL_PARTICLES.has(cleaned[cleaned.length - 1])) {
+            cleaned = cleaned.slice(0, -1);
+          }
         }
         // Before stripping grammar suffixes, check if the whole segment
         // (or a long prefix) matches an override — prevents breaking compound overrides
