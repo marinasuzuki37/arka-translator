@@ -3935,6 +3935,11 @@ class ArkaEngine {
       }
     }
 
+    // ===== SELF-INTRODUCTION IDIOM (アルカ文化: 私の名前は〜です → 私は〜です) =====
+    // アルカでは「私の名前は〜です」ではなく「an et 〜」と言う
+    // 主語付きパターンのみ対象（「名前は大切」など非自己紹介は保護）
+    processedText = processedText.replace(/(私|俺|僕|あたし|わて|うち)の名前は/g, '$1は');
+
     // ===== COPULA DETECTION =====
     const copulaInfo = this._detectCopulaPattern(processedText);
 
