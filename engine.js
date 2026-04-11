@@ -2096,6 +2096,11 @@ class ArkaEngine {
     'してもらいたい': 'sant', 'てもらいたい': 'sant',
     '幸せ': 'nil', '幸せな': 'nil', '幸福': 'nil', '不幸': 'nels', '不幸な': 'nels',
     '幸せになってほしい': 'lax nil', '幸せになる': 'nil',
+    // --- Round 7: Missing verbs/adj ---
+    '頑張る': 'vosk', '頑張って': 'vosk', '頑張っ': 'vosk', '頑張った': 'vosk',
+    '頑張ってほしい': 'lax vosk', '頑張ってください': 'vosk ret',
+    '頑張れ': 'vosk', '頑張り': 'vosk',
+    '彼氏': 'tian',
     // --- Round 7: Verb stem fragments (after GRAMMAR_SUFFIXES stripping) ---
     '食べ': 'kui', '食べられ': 'kui', '食べられない': 'kui en',
     '降っ': 'ar', '行': 'ke', '行き': 'ke', '行った': 'ke',
@@ -3981,8 +3986,10 @@ class ArkaEngine {
       }
     }
 
-    // Step 2: Replace pronouns
-    for (const [jp, arka] of Object.entries(ArkaEngine.REVERSE_PRONOUNS)) {
+    // Step 2: Replace pronouns (longest match first to prevent 彼 consuming 彼女)
+    const pronounEntries = Object.entries(ArkaEngine.REVERSE_PRONOUNS)
+      .sort((a, b) => b[0].length - a[0].length);
+    for (const [jp, arka] of pronounEntries) {
       if (processed.includes(jp)) {
         processed = processed.replace(new RegExp(this._escapeRegex(jp), 'g'), ` __PRONOUN_${arka}__ `);
       }
