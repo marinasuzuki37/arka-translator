@@ -1234,7 +1234,7 @@ class ArkaEngine {
           // Drop single hiragana/katakana/punctuation fragments
           const DROPPABLE_SINGLE_P = /^[ぁ-んァ-ン、。！？!?,.　\s]$/;
           if (DROPPABLE_SINGLE_P.test(word)) continue;
-          const DROPPABLE_GRAMMAR_P = /^(った|って|れる|せる|せて|ない|てい|てる|てく|れた|され|させ|なら|たら|から|まし|な、|な。|てし|ても|ては|らえ|やろ|まい|つき|べき|るたび|[、。！？!?,.　]+)$/;
+          const DROPPABLE_GRAMMAR_P = /^(った|って|れる|せる|せて|ない|てい|てる|てく|れた|され|させ|なら|たら|から|まし|な、|な。|てし|ても|ては|らえ|やろ|まい|つき|べき|るたび|ません|してい|してる|してう|[、。！？!?,.　]+)$/;
           if (DROPPABLE_GRAMMAR_P.test(word)) continue;
           arkaParts.push(`[${word}]`);
           breakdown.push({
@@ -2101,6 +2101,59 @@ class ArkaEngine {
     '頑張ってほしい': 'lax vosk', '頑張ってください': 'vosk ret',
     '頑張れ': 'vosk', '頑張り': 'vosk',
     '彼氏': 'tian',
+    // --- Round 8: Tech / Business / School / Medical / Hobby ---
+    // IT・技術
+    'パスワード': 'kalmal', '変更': 'miyu', '変更する': 'miyu', '変更し': 'miyu', '変える': 'miyu',
+    '保存': 'vanz', '保存する': 'vanz', '保存し': 'vanz', '保存した': 'vanz',
+    '送る': 'alp', '送っ': 'alp', '送った': 'alp', '送って': 'alp', '送信': 'alp',
+    'ファイル': 'tex', 'メール': 'hek', 'データ': 'tex',
+    'プログラム': 'akre', 'ソフト': 'enti', 'アプリ': 'enti',
+    'バグ': 'rig', 'インターネット': 'oz', '接続': 'ark', '接続する': 'ark', '接続し': 'ark',
+    '接続できない': 'ark en', '繋がらない': 'ark en',
+    'パソコン': 'asblen', 'コンピュータ': 'asblen',
+    '壊れた': 'rig', '壊れる': 'rig', '壊す': 'rig', '壊れ': 'rig',
+    'バックアップ': 'vanz', 'バックアップし': 'vanz',
+    '画面': 'slet', 'スクリーン': 'slet', 'モニター': 'slet',
+    '動く': 'ov', '動かない': 'ov en', '動': 'ov', '動か': 'ov',
+    'インストール': 'ev', 'インストールする': 'ev', 'インストールし': 'ev',
+    'システム': 'enti', '再起動': 'menet', '再起動し': 'menet',
+    // ビジネス・仕事
+    '会議': 'ata', '会議室': 'ataez',
+    '資料': 'semas', '書類': 'semas',
+    '準備': 'sat', '準備する': 'sat', '準備し': 'sat',
+    '上司': 'haxt', '部下': 'res',
+    '報告': 'ela', '報告する': 'ela', '報告し': 'ela',
+    '締め切り': 'xaz', '締切': 'xaz', '期限': 'xaz', '納期': 'xaz',
+    '難しい': 'kin', '難し': 'kin',
+    '予算': 'fant', '費用': 'fant',
+    '足りる': 'tuval', '足り': 'tuval', '足りない': 'sej', '足らない': 'sej',
+    '契約': 'pina', '契約書': 'pina semas',
+    'サイン': 'leste', '署名': 'leste', 'サインし': 'leste',
+    '出張': 'labkeks', '出張する': 'labkeks',
+    '給料': 'lag', '給与': 'lag', '賃金': 'lag',
+    '上がる': 'meif', '上がった': 'meif', '上がっ': 'meif', '上げる': 'meif',
+    '残業': 'raklab', '残業する': 'raklab', '残業した': 'raklab',
+    'プロジェクト': 'lab',
+    // 学校・勉強
+    '合格': 'vast', '合格する': 'vast', '合格し': 'vast',
+    '不合格': 'vade', '落ちた': 'vade',
+    '数学': 'kont', '英語': 'eld inglant', '国語': 'eld parman',
+    '苦手': 'looa', '苦手な': 'looa', '得意': 'axk', '得意な': 'axk',
+    '図書館': 'leika', '図書室': 'leika',
+    '先生': 'sete', '先生に': 'sete',
+    // 医療
+    '手術': 'valk', '手術する': 'valk',
+    'アレルギー': 'rako',
+    '頭が痛い': 'osn kin', '頭痛': 'osn kin',
+    // 趣味・日常
+    'サッカー': 'viedgek', '野球': 'baogek',
+    '絵': 'leis', '絵を描く': 'leis', '描く': 'leis', '描': 'leis', '描い': 'leis',
+    '旅行': 'keks', '旅行する': 'keks',
+    'プレゼント': 'xant', '贈り物': 'xant',
+    '買る': 'gilm', '買い': 'gilm',
+    '結婚': 'mals', '結婚する': 'mals', '結婚し': 'mals',
+    '来年': 'kessalt',
+    '聴': 'rant', '聴い': 'rant', '聴く': 'rant',
     // --- Round 7: Verb stem fragments (after GRAMMAR_SUFFIXES stripping) ---
     '食べ': 'kui', '食べられ': 'kui', '食べられない': 'kui en',
     '降っ': 'ar', '行': 'ke', '行き': 'ke', '行った': 'ke',
@@ -4044,7 +4097,7 @@ class ArkaEngine {
         const DROPPABLE_SINGLE = /^[ぁ-んァ-ン、。！？!?,.　\s]$/;
         if (DROPPABLE_SINGLE.test(seg)) continue;
         // Drop 2-char fragments that are pure grammar (e.g. った, って)
-        const DROPPABLE_GRAMMAR = /^(った|って|れる|せる|せて|ない|てい|てる|てく|れた|され|させ|なら|たら|から|まし|な、|な。|てし|ても|ては|らえ|やろ|まい|つき|べき|るたび|、|。|[、。！？!?,.　]+)$/;
+        const DROPPABLE_GRAMMAR = /^(った|って|れる|せる|せて|ない|てい|てる|てく|れた|され|させ|なら|たら|から|まし|な、|な。|てし|ても|ては|らえ|やろ|まい|つき|べき|るたび|ません|してい|してる|してう|、|。|[、。！？!?,.　]+)$/;
         if (DROPPABLE_GRAMMAR.test(seg)) continue;
         // Katakana proper nouns: pass through without brackets (likely names/places)
         const isKatakana = /^[\u30A0-\u30FF\u30FC]+$/.test(seg) && seg.length >= 2;
