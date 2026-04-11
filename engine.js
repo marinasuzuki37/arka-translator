@@ -2015,6 +2015,111 @@ class ArkaEngine {
     '民主主義': 'minal', '独裁': 'veskolm',
     '宰相': 'israfel', '摂政': 'vanort', '関白': 'saloant',
     '弁護士': 'dankan', '福祉': 'gelp',
+    // --- Daily Life (Round 6) ---
+    '飲む': 'xen', '飲んだ': 'xen', '飲んで': 'xen', '飲みたい': 'lax xen',
+    '座る': 'skin', '座って': 'skin', '座った': 'skin',
+    '疲れた': 'ani', '疲れる': 'ani', '疲れ': 'ani',
+    '恥ずかしい': 'adin', '恥ずかし': 'adin',
+    '手伝う': 'alk', '手伝って': 'alk', '手伝った': 'alk',
+    '入る': 'erx', '入って': 'erx', '入った': 'erx',
+    '撮る': 'kaxn', '撮って': 'kaxn', '撮った': 'kaxn',
+    '掃除': 'osk', '掃除する': 'osk', '掃除した': 'osk',
+    '洗う': 'olx', '洗った': 'olx', '洗って': 'olx',
+    '散歩': 'palf', '散歩する': 'palf',
+    '電話': 'dekokap', '電話する': 'dekokap',
+    '作った': 'lad', '作って': 'lad', '作っている': 'lad',
+    '休み': 'nian', '休む': 'nian',
+    '宿題': 'rafel',
+    '試験': 'tipl', 'テスト': 'tipl',
+    '質問': 'asm', '質問する': 'asm',
+    '病院': 'valsaz', '医者': 'vals',
+    '薬': 'anxalia', '薬を飲む': 'xen anxalia',
+    '治る': 'kea', '治った': 'kea', '治す': 'kea',
+    '分かる': 'loki', '分かった': 'loki', '分かりました': 'loki',
+    '分からない': 'loki mi', '分かりません': 'loki mi',
+    '知る': 'ser', '知っている': 'ser', '知りません': 'ser mi', '知らない': 'ser mi',
+    '賛成': 'xam', '賛成する': 'xam',
+    '反対': 'stir', '反対する': 'stir',
+    '勉強': 'fel', '勉強する': 'fel', '勉強している': 'fel', '勉強していた': 'fel',
+    '泊まる': 'xamp', '泊まりたい': 'lax xamp', '泊まった': 'xamp',
+    '聴く': 'rant', '聴いて': 'rant', '聴いている': 'rant',
+    '音楽': 'miks',
+    '買い物': 'gilm', '買い物する': 'gilm',
+    '服': 'sab',
+    '毎日': 'ilsel',
+    '大変': 'xep',
+    'コーヒー': 'pile',
+    '夕食': 'cuux', '晩ご飯': 'cuux', '晩御飯': 'cuux',
+    '寒い': 'sort', '寒かった': 'sort',
+    '雪': 'esk',
+    'つまらない': 'buuna', 'つまらな': 'buuna',
+    '趣味': 'axon',
+    '読書': 'isk',
+    '具合': 'avix', '具合が悪い': 'avix',
+    'ドア': 'omi', '扉': 'omi',
+    'カード': 'kart',
+    'バス': 'font',
+    'ここ': 'atu', 'そこ': 'atu',
+    'あそこ': 'atu', 'あっち': 'atu',
+    '思う': 'lo', '思います': 'lo', '思った': 'lo', '思っている': 'lo',
+    '考え': 'lo', '考える': 'rafis',
+    '読んだ': 'isk', '読んで': 'isk', '読んでいる': 'isk',
+    '乗る': 'skin', '乗った': 'skin', '乗って': 'skin',
+    '乗り遅れた': 'demi skin',
+    '降る': 'ar', '降った': 'ar', '降っている': 'ar', '降って': 'ar',
+    'まっすぐ': 'leik',
+    '高すぎる': 'sor nod',
+    '心配': 'gad', '心配する': 'gad',
+    'びっくり': 'nan', 'びっくりした': 'nan',
+    '日本人': 'parman',
+    '日本語': 'eld parman',
+    '映画': 'dels',
+    '写真': 'sec',
+    '熱': 'hart', '熱がある': 'xa hart',
+    '帰る': 'kolt', '帰りたい': 'lax kolt', '帰った': 'kolt',
+    '曲がる': 'looz', '曲がって': 'looz',
+    '払う': 'dnal', '払える': 'dnal', '払えます': 'dnal',
+    '行こう': 'van ke', '食べよう': 'van kui', '見に行く': 'in ke',
+    '寝る': 'mok', '寝ます': 'mok', '寝た': 'mok',
+    '起きる': 'net', '起きます': 'net',
+    '怒って': 'jo', '怒っている': 'jo',
+    '何歳': 'fia tia',
+    '朝六時': 'faar man tia',
+    '三時': 'viosn miv',
+    '来週': 'kest ven',
+
+    // --- Round 7: Verb stem fragments (after GRAMMAR_SUFFIXES stripping) ---
+    '食べ': 'kui', '食べられ': 'kui', '食べられない': 'kui en',
+    '降っ': 'ar', '行': 'ke', '行き': 'ke', '行った': 'ke',
+    '払え': 'dnal', '起': 'net', '起き': 'net',
+    '作っ': 'lad', '待ち': 'vat', '寝': 'mok',
+    '飲ん': 'xen', '飲んだ': 'xen',
+    '見': 'in', '見に': 'in',
+    '見に行った': 'in ke', '見に行く': 'in ke',
+    '電話をかけた': 'dekokap', 'かけた': 'dekokap', 'かける': 'dekokap',
+    '勉強してい': 'fel', '勉強している': 'fel', '勉強しています': 'fel',
+    'そう思い': 'tur lo', 'そう思う': 'tur lo', 'そう思います': 'tur lo',
+    // --- Round 7: Compound expressions ---
+    '方がいい': 'tal', '方が良い': 'tal',
+    '行った方がいい': 'tal ke', '食べた方がいい': 'tal kui',
+    '病院に行った方がいい': 'tal valsaz ke',
+    'どうやって': 'fia na', 'どうして': 'ti', 'どう': 'fia na',
+    'どちら': 'fia',
+    '大学生': 'felan', '大学': 'felka',
+    '安い方': 'fer',
+    // --- Round 7: Conditional/complex sentences (preprocess targets) ---
+    '降ったら': 'ar miv', '降った': 'ar',
+    '遊び': 'ban', '遊ぶ': 'ban', '遊びに': 'ban',
+    '遊びに来て': 'ban luna', '遊びに来てください': 'ban luna ret',
+    '待ちましょう': 'van vat',
+    '食べましょう': 'van kui',
+    '買った': 'gilm', '買った本': 'gilm lei', '買う': 'gilm',
+    '料理': 'bel', '料理を作っている': 'bel lad',
+    '料理を作る': 'bel lad', '料理を作って': 'bel lad',
+    // --- Round 7: Proper nouns (katakana pass-through handled below) ---
+    '東京': 'tokyo', '大阪': 'oosaka',
+    '二十歳': 'al tia', '二十': 'al',
+
     // --- Places & Nature ---
     '学校': 'felka', '家': 'ra', '部屋': 'ez',
     '空': 'jan', '山': 'wal', '海': 'tier', '川': 'erei',
@@ -3920,8 +4025,16 @@ class ArkaEngine {
         // Drop 2-char fragments that are pure grammar (e.g. った, って)
         const DROPPABLE_GRAMMAR = /^(った|って|れる|せる|せて|ない|てい|てる|てく|れた|され|させ|なら|たら|から|まし|な、|な。|てし|ても|ては|らえ|やろ|まい|つき|べき|るたび|、|。|[、。！？!?,.　]+)$/;
         if (DROPPABLE_GRAMMAR.test(seg)) continue;
-        arkaParts.push(`[${seg}]`);
-        breakdown.push({ original: seg, root: seg, type: 'unknown', meaning: '(該当なし)', entry: null, suffixes: [], prefixes: [] });
+        // Katakana proper nouns: pass through without brackets (likely names/places)
+        const isKatakana = /^[\u30A0-\u30FF\u30FC]+$/.test(seg) && seg.length >= 2;
+        if (isKatakana) {
+          const romanized = seg; // Keep as-is (katakana name)
+          arkaParts.push(romanized);
+          breakdown.push({ original: seg, root: romanized, type: 'name', meaning: `${seg} (固有名詞)`, entry: null, suffixes: [], prefixes: [] });
+        } else {
+          arkaParts.push(`[${seg}]`);
+          breakdown.push({ original: seg, root: seg, type: 'unknown', meaning: '(該当なし)', entry: null, suffixes: [], prefixes: [] });
+        }
       }
     }
     return { arkaParts, breakdown };
