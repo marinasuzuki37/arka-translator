@@ -368,9 +368,9 @@ class ArkaEngine {
     'yam': 'やはり',
     // === 文末純詞 ===
     'sei': '～だろうか(推量)',
-    'in': '～のようだ(見た感じ)',
+    // 'in' removed — verb 見る takes priority; sentence-final usage handled in assembly
     'xan': '～だったのか(気付き)',
-    'na': '～のようだ(感覚)',
+    // 'na' removed — verb 感じる/noun 心 takes priority; sentence-final usage handled in assembly
     'ter': '～のようだ(聞いた感じ)',
     'tisee': '～なのだ(情報提供)',
     'kok': '～だよね？(同意要求)',
@@ -1884,6 +1884,20 @@ class ArkaEngine {
         if (commaMatch) tokens.push(',');
       }
       const analyzed = tokens.filter(t => t !== ',').map(t => this.analyzeToken(t));
+
+      // Sentence-final 'in'/'na' → treat as sentence particles instead of verb/noun
+      const SENTENCE_FINAL_PARTICLES = {
+        'in': '～のようだ(見た感じ)',
+        'na': '～のようだ(感覚)',
+      };
+      if (analyzed.length >= 2) {
+        const last = analyzed[analyzed.length - 1];
+        if (SENTENCE_FINAL_PARTICLES[last.original?.toLowerCase()]) {
+          last.type = 'sentence_particle';
+          last.meaning = SENTENCE_FINAL_PARTICLES[last.original.toLowerCase()];
+        }
+      }
+
       allBreakdown.push(...analyzed);
 
       const jpParts = [];
